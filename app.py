@@ -1256,7 +1256,7 @@ if "rankings" in st.session_state:
                 with comp_col1:
                     st.markdown(
                         f'<div style="background:var(--bg-card-alt);border:1px solid var(--border-card);'
-                        f'border-radius:10px;padding:0.8rem;height:100%;">'
+                        f'border-radius:10px;padding:0.8rem;min-height:200px;">'
                         f'<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;'
                         f'padding-bottom:0.5rem;border-bottom:1px solid var(--border-color);">'
                         f'<span class="badge badge-clean">#{compare_cids[0]}</span>'
@@ -1269,7 +1269,7 @@ if "rankings" in st.session_state:
                 with comp_col2:
                     st.markdown(
                         f'<div style="background:var(--bg-card-alt);border:1px solid var(--border-card);'
-                        f'border-radius:10px;padding:0.8rem;height:100%;">'
+                        f'border-radius:10px;padding:0.8rem;min-height:200px;">'
                         f'<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;'
                         f'padding-bottom:0.5rem;border-bottom:1px solid var(--border-color);">'
                         f'<span class="badge badge-clean">#{compare_cids[1]}</span>'
