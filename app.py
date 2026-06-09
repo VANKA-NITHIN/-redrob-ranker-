@@ -7,7 +7,6 @@ import os
 import sys
 import time
 
-import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
@@ -382,7 +381,6 @@ if "rankings" in st.session_state:
 
     # ── Score distribution chart ──
     scores = [r[0] for r in rankings]
-    penalties = [r[3] for r in rankings]
 
     fig = go.Figure()
 
@@ -519,12 +517,7 @@ if "rankings" in st.session_state:
         </div>
         """
 
-        animation_delay = rank * 0.03
-        card_html = card_html.replace("animation-delay:{rank * 0.03}s",
-                                      f"animation-delay:{animation_delay}s")
-        st.markdown(card_html.replace("animation-delay:{rank * 0.03}s",
-                                      f"animation-delay:{animation_delay}s"),
-                    unsafe_allow_html=True)
+        st.markdown(card_html, unsafe_allow_html=True)
 
     # Clear button
     col1, col2, col3 = st.columns([1, 1, 1])
