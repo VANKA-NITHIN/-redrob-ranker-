@@ -8,7 +8,7 @@ team_name: "VANKA-NITHIN"
 primary_contact:
   name: "VANKA NITHIN"
   email: "vankanithin2004@gmail.com"
-  phone: "+91-XXXXXXXXXX"
+  phone: "+91-7416234130"
 
 team_members:
   - name: "VANKA NITHIN"
@@ -21,6 +21,8 @@ team_members:
 github_repo: "https://github.com/VANKA-NITHIN/-redrob-ranker-"
 
 sandbox_link: "https://huggingface.co/spaces/VANKA-NITHIN/redrob-ranker"
+  # To deploy: set HF_TOKEN env var, then run: python scripts/deploy_hf.py
+  # Or manually: create Space on huggingface.co, upload app.py + requirements.txt
 
 reproduce_command: "python ranker.py"
 
