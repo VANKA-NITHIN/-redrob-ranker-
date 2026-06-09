@@ -1,6 +1,6 @@
 """
 Redrob Hackathon — Intelligent Candidate Ranking
-Enterprise-grade UI with Excel/CSV/JSON input, tabbed analytics, and professional design.
+Enterprise-grade UI with Excel/CSV/JSON input, tabbed analytics, dark/light theme, and professional design.
 """
 import json
 import os
@@ -23,32 +23,154 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ── Theme ───────────────────────────────────────────────────────────────────
+
+THEME = st.session_state.get("theme", "dark")
+
+# Plotly colors — resolved here because CSS variables don't work in Plotly's SVG output
+if THEME == "dark":
+    P = {
+        "chart_bg": "rgba(0,0,0,0)",
+        "text_primary": "#e2e8f0",
+        "text_muted": "#64748b",
+        "chart_grid": "rgba(255,255,255,0.03)",
+        "success": "#34d399",
+        "warning": "#fbbf24",
+        "danger": "#f87171",
+        "bg_primary": "#0a0e17",
+    }
+else:
+    P = {
+        "chart_bg": "rgba(0,0,0,0)",
+        "text_primary": "#0f172a",
+        "text_muted": "#64748b",
+        "chart_grid": "rgba(0,0,0,0.06)",
+        "success": "#10b981",
+        "warning": "#d97706",
+        "danger": "#ef4444",
+        "bg_primary": "#f8fafc",
+    }
+
+# CSS variable definitions for both themes
+DARK_VARS = """
+    --bg-primary: #0a0e17;
+    --bg-secondary: #0f1629;
+    --bg-tertiary: #1a1f3a;
+    --bg-card: rgba(30,41,59,0.8);
+    --bg-card-alt: rgba(15,23,42,0.8);
+    --bg-card-hover: rgba(30,41,59,0.6);
+    --bg-welcome: rgba(30,41,59,0.6);
+    --bg-preview: rgba(30,41,59,0.4);
+    --bg-sample: rgba(255,255,255,0.02);
+    --sidebar-bg: #0f1629;
+    --text-primary: #f1f5f9;
+    --text-secondary: #e2e8f0;
+    --text-muted: #64748b;
+    --text-muted-dark: #94a3b8;
+    --text-dim: #334155;
+    --text-dim2: #475569;
+    --border-color: rgba(255,255,255,0.06);
+    --border-light: rgba(255,255,255,0.05);
+    --border-card: rgba(255,255,255,0.05);
+    --border-hover: rgba(59,130,246,0.2);
+    --accent-blue: #3b82f6;
+    --accent-blue-light: #60a5fa;
+    --accent-blue-dark: #2563eb;
+    --accent-purple: #8b5cf6;
+    --success: #34d399;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --gradient-blue: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    --gradient-nav: linear-gradient(135deg, #0f1629 0%, #1a1f3a 100%);
+    --shadow: 0 8px 25px rgba(59,130,246,0.08);
+    --chart-bg: rgba(0,0,0,0);
+    --chart-grid: rgba(255,255,255,0.03);
+    --badge-clean-bg: rgba(52,211,153,0.12);
+    --badge-suspicious-bg: rgba(251,191,36,0.12);
+    --badge-honeypot-bg: rgba(248,113,113,0.12);
+    --score-bar-bg: rgba(255,255,255,0.06);
+"""
+
+LIGHT_VARS = """
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f1f5f9;
+    --bg-card: rgba(255,255,255,0.95);
+    --bg-card-alt: rgba(248,250,252,0.95);
+    --bg-card-hover: rgba(248,250,252,0.85);
+    --bg-welcome: rgba(255,255,255,0.8);
+    --bg-preview: rgba(255,255,255,0.7);
+    --bg-sample: rgba(0,0,0,0.02);
+    --sidebar-bg: #ffffff;
+    --text-primary: #0f172a;
+    --text-secondary: #1e293b;
+    --text-muted: #64748b;
+    --text-muted-dark: #475569;
+    --text-dim: #94a3b8;
+    --text-dim2: #cbd5e1;
+    --border-color: rgba(0,0,0,0.08);
+    --border-light: rgba(0,0,0,0.06);
+    --border-card: rgba(0,0,0,0.06);
+    --border-hover: rgba(59,130,246,0.3);
+    --accent-blue: #2563eb;
+    --accent-blue-light: #3b82f6;
+    --accent-blue-dark: #1d4ed8;
+    --accent-purple: #7c3aed;
+    --success: #10b981;
+    --warning: #d97706;
+    --danger: #ef4444;
+    --gradient-blue: linear-gradient(135deg, #2563eb, #7c3aed);
+    --gradient-nav: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+    --shadow: 0 8px 25px rgba(0,0,0,0.06);
+    --chart-bg: rgba(0,0,0,0);
+    --chart-grid: rgba(0,0,0,0.06);
+    --badge-clean-bg: rgba(16,185,129,0.1);
+    --badge-suspicious-bg: rgba(217,119,6,0.1);
+    --badge-honeypot-bg: rgba(239,68,68,0.1);
+    --score-bar-bg: rgba(0,0,0,0.08);
+"""
+
+# Inject theme variables
+theme_vars = DARK_VARS if THEME == "dark" else LIGHT_VARS
+st.markdown(f"<style>:root {{{theme_vars}}}</style>", unsafe_allow_html=True)
+
 # ── Enterprise Theme ─────────────────────────────────────────────────────────
-ENTERPRISE_CSS = """
+
+ENTERPRISE_CSS = f"""
 <style>
     /* ── Font import must be first ── */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
     /* ── Base ── */
-    .stApp { background: #0a0e17; }
-    .stApp > header { background: transparent !important; }
-    .stApp > header [data-testid="stDecoration"] { display: none; }
+    .stApp {{ background: var(--bg-primary); }}
+    .stApp > header {{ background: transparent !important; }}
+    .stApp > header [data-testid="stDecoration"] {{ display: none; }}
 
     /* ── Typography ── */
-    html, body, [class*="css"] { font-family: 'Inter', -apple-system, sans-serif; }
+    html, body, [class*="css"] {{ font-family: 'Inter', -apple-system, sans-serif; }}
+
+    /* ── Theme toggle icon ── */
+    .theme-toggle-icon {{
+        font-size: 1.1rem;
+        transition: transform 0.3s ease;
+        display: inline-block;
+    }}
+    .theme-toggle-icon:hover {{
+        transform: rotate(30deg);
+    }}
 
     /* ── Responsive Container ── */
-    .main > .block-container {
+    .main > .block-container {{
         max-width: 100%;
         padding-left: 1.5rem !important;
         padding-right: 1.5rem !important;
         transition: padding 0.3s ease;
-    }
+    }}
 
     /* ── Top Nav Bar ── */
-    .nav-bar {
-        background: linear-gradient(135deg, #0f1629 0%, #1a1f3a 100%);
-        border-bottom: 1px solid rgba(255,255,255,0.06);
+    .nav-bar {{
+        background: var(--gradient-nav);
+        border-bottom: 1px solid var(--border-color);
         padding: 0.8rem 1.5rem;
         display: flex;
         align-items: center;
@@ -56,155 +178,153 @@ ENTERPRISE_CSS = """
         margin: -1rem -1rem 1rem -1rem;
         gap: 0.5rem;
         transition: padding 0.3s ease;
-    }
-    .nav-brand {
+    }}
+    .nav-brand {{
         display: flex;
         align-items: center;
         gap: 0.75rem;
         min-width: 0;
-    }
-    .nav-logo {
+    }}
+    .nav-logo {{
         flex-shrink: 0;
         width: 36px; height: 36px;
-        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        background: var(--gradient-blue);
         border-radius: 10px;
         display: flex; align-items: center; justify-content: center;
         font-size: 1.2rem;
-    }
-    .nav-title {
+    }}
+    .nav-title {{
         font-weight: 700;
         font-size: clamp(0.9rem, 2.5vw, 1.2rem);
-        color: #f1f5f9;
+        color: var(--text-primary);
         letter-spacing: -0.3px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-    }
-    .nav-subtitle {
+    }}
+    .nav-subtitle {{
         font-size: clamp(0.65rem, 1.5vw, 0.8rem);
-        color: #64748b;
+        color: var(--text-muted);
         margin-top: -0.1rem;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-    }
-    .nav-version {
+    }}
+    .nav-version {{
         flex-shrink: 0;
         background: rgba(59,130,246,0.15);
-        color: #60a5fa;
+        color: var(--accent-blue-light);
         padding: 0.2rem 0.6rem;
         border-radius: 6px;
         font-size: clamp(0.6rem, 1.2vw, 0.7rem);
         font-weight: 600;
         white-space: nowrap;
-    }
+    }}
 
     /* ── Enterprise Metric Cards ── */
-    .metric-grid {
+    .metric-grid {{
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
         gap: 0.6rem;
         margin-bottom: 1.5rem;
-    }
-    .metric-card {
-        background: linear-gradient(135deg, rgba(30,41,59,0.8), rgba(15,23,42,0.8));
-        border: 1px solid rgba(255,255,255,0.06);
+    }}
+    .metric-card {{
+        background: var(--bg-card);
+        backdrop-filter: blur(8px);
+        border: 1px solid var(--border-card);
         border-radius: 12px;
         padding: clamp(0.8rem, 1.5vw, 1.2rem) clamp(0.7rem, 1.2vw, 1rem);
         position: relative;
         overflow: hidden;
         transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
         -webkit-tap-highlight-color: transparent;
-    }
-    .metric-card:active {
+    }}
+    .metric-card:active {{
         transform: scale(0.97);
-    }
-    @media (hover: hover) {
-        .metric-card:hover {
+    }}
+    @media (hover: hover) {{
+        .metric-card:hover {{
             border-color: rgba(59,130,246,0.3);
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(59,130,246,0.08);
-        }
-    }
-    .metric-card .accent-line {
+            box-shadow: var(--shadow);
+        }}
+    }}
+    .metric-card .accent-line {{
         position: absolute;
         top: 0; left: 0; right: 0; height: 3px;
-        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-    }
-    .metric-value {
+        background: var(--gradient-blue);
+    }}
+    .metric-value {{
         font-size: clamp(1.2rem, 3.5vw, 1.8rem);
         font-weight: 800;
-        color: #f1f5f9;
+        color: var(--text-primary);
         letter-spacing: -0.5px;
         line-height: 1.2;
-    }
-    .metric-label {
+    }}
+    .metric-label {{
         font-size: clamp(0.6rem, 1.5vw, 0.78rem);
-        color: #64748b;
+        color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 0.8px;
         margin-top: 0.25rem;
-    }
-    .metric-trend {
-        font-size: 0.7rem;
-        margin-top: 0.3rem;
-    }
-    .metric-trend.up { color: #34d399; }
-    .metric-trend.down { color: #f87171; }
+    }}
+    .metric-trend {{ font-size: 0.7rem; margin-top: 0.3rem; }}
+    .metric-trend.up {{ color: var(--success); }}
+    .metric-trend.down {{ color: var(--danger); }}
 
     /* ── Enterprise Data Cards ── */
-    .rank-card {
-        background: linear-gradient(135deg, rgba(30,41,59,0.6), rgba(15,23,42,0.6));
-        border: 1px solid rgba(255,255,255,0.05);
+    .rank-card {{
+        background: var(--bg-card-hover);
+        border: 1px solid var(--border-card);
         border-radius: 10px;
         padding: clamp(0.6rem, 1.2vw, 1rem) clamp(0.8rem, 1.5vw, 1.2rem);
         margin-bottom: 0.5rem;
         transition: all 0.25s ease;
         animation: slideIn 0.35s ease-out;
         -webkit-tap-highlight-color: transparent;
-    }
-    .rank-card:active {
+    }}
+    .rank-card:active {{
         transform: scale(0.99);
-    }
-    @media (hover: hover) {
-        .rank-card:hover {
-            border-color: rgba(59,130,246,0.2);
-            background: rgba(30,41,59,0.8);
+    }}
+    @media (hover: hover) {{
+        .rank-card:hover {{
+            border-color: var(--border-hover);
+            background: var(--bg-card);
             transform: translateX(3px);
-        }
-    }
+        }}
+    }}
 
-    @keyframes slideIn {
-        from { opacity: 0; transform: translateX(-10px); }
-        to   { opacity: 1; transform: translateX(0); }
-    }
+    @keyframes slideIn {{
+        from {{ opacity: 0; transform: translateX(-10px); }}
+        to   {{ opacity: 1; transform: translateX(0); }}
+    }}
 
-    .rank-number {
+    .rank-number {{
         font-weight: 800;
         font-size: clamp(0.9rem, 2vw, 1.2rem);
-        color: #3b82f6;
+        color: var(--accent-blue);
         min-width: clamp(1.8rem, 4vw, 2.5rem);
         flex-shrink: 0;
-    }
-    .candidate-name {
+    }}
+    .candidate-name {{
         font-weight: 600;
-        color: #e2e8f0;
+        color: var(--text-secondary);
         font-size: clamp(0.8rem, 1.5vw, 0.95rem);
         word-break: break-word;
-    }
-    .candidate-meta {
-        color: #64748b;
+    }}
+    .candidate-meta {{
+        color: var(--text-muted);
         font-size: clamp(0.65rem, 1.2vw, 0.8rem);
         word-break: break-word;
-    }
-    .score-text {
+    }}
+    .score-text {{
         font-family: 'JetBrains Mono', 'SF Mono', monospace;
         font-weight: 600;
         white-space: nowrap;
-    }
+    }}
 
     /* ── Badges ── */
-    .badge {
+    .badge {{
         display: inline-flex;
         align-items: center;
         padding: 0.15rem 0.55rem;
@@ -213,43 +333,43 @@ ENTERPRISE_CSS = """
         font-weight: 600;
         letter-spacing: 0.3px;
         white-space: nowrap;
-    }
-    .badge-clean { background: rgba(52,211,153,0.12); color: #34d399; }
-    .badge-suspicious { background: rgba(251,191,36,0.12); color: #fbbf24; }
-    .badge-honeypot { background: rgba(248,113,113,0.12); color: #f87171; animation: pulse 2s infinite; }
+    }}
+    .badge-clean {{ background: var(--badge-clean-bg); color: var(--success); }}
+    .badge-suspicious {{ background: var(--badge-suspicious-bg); color: var(--warning); }}
+    .badge-honeypot {{ background: var(--badge-honeypot-bg); color: var(--danger); animation: pulse 2s infinite; }}
 
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
-    }
+    @keyframes pulse {{
+        0%, 100% {{ opacity: 1; }}
+        50% {{ opacity: 0.7; }}
+    }}
 
     /* ── Progress bar ── */
-    .score-bar {
+    .score-bar {{
         height: 3px;
         border-radius: 3px;
-        background: rgba(255,255,255,0.06);
+        background: var(--score-bar-bg);
         margin: 0.4rem 0 0.3rem 0;
         overflow: hidden;
-    }
-    .score-bar-fill {
+    }}
+    .score-bar-fill {{
         height: 100%;
         border-radius: 3px;
         transition: width 1s ease;
-    }
+    }}
 
     /* ── Tab styling ── */
-    .stTabs [data-baseweb="tab-list"] {
+    .stTabs [data-baseweb="tab-list"] {{
         gap: 0.25rem;
-        border-bottom: 1px solid rgba(255,255,255,0.06);
+        border-bottom: 1px solid var(--border-color);
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
         flex-wrap: nowrap;
-    }
-    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar { display: none; }
-    .stTabs [data-baseweb="tab"] {
+    }}
+    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {{ display: none; }}
+    .stTabs [data-baseweb="tab"] {{
         background: transparent !important;
-        color: #64748b !important;
+        color: var(--text-muted) !important;
         font-weight: 500;
         font-size: clamp(0.7rem, 1.5vw, 0.85rem);
         padding: clamp(0.4rem, 1vw, 0.5rem) clamp(0.5rem, 1.5vw, 1rem);
@@ -258,222 +378,188 @@ ENTERPRISE_CSS = """
         white-space: nowrap;
         flex-shrink: 0;
         -webkit-tap-highlight-color: transparent;
-    }
-    @media (hover: hover) {
-        .stTabs [data-baseweb="tab"]:hover {
-            color: #e2e8f0 !important;
-            background: rgba(255,255,255,0.03) !important;
-        }
-    }
-    .stTabs [aria-selected="true"] {
-        color: #60a5fa !important;
-        border-bottom: 2px solid #3b82f6 !important;
-    }
+    }}
+    @media (hover: hover) {{
+        .stTabs [data-baseweb="tab"]:hover {{
+            color: var(--text-secondary) !important;
+            background: rgba(128,128,128,0.03) !important;
+        }}
+    }}
+    .stTabs [aria-selected="true"] {{
+        color: var(--accent-blue-light) !important;
+        border-bottom: 2px solid var(--accent-blue) !important;
+    }}
 
     /* ── Sidebar ── */
-    section[data-testid="stSidebar"] {
-        background: #0f1629;
-        border-right: 1px solid rgba(255,255,255,0.05);
-    }
-    section[data-testid="stSidebar"] .stButton button {
+    section[data-testid="stSidebar"] {{
+        background: var(--sidebar-bg);
+        border-right: 1px solid var(--border-light);
+    }}
+    section[data-testid="stSidebar"] .stButton button {{
         border-radius: 8px;
         font-weight: 500;
         font-size: clamp(0.75rem, 1.2vw, 0.85rem);
         min-height: 44px;
         -webkit-tap-highlight-color: transparent;
-    }
-    section[data-testid="stSidebar"] .stButton button[kind="primary"] {
-        background: linear-gradient(135deg, #3b82f6, #2563eb);
+    }}
+    section[data-testid="stSidebar"] .stButton button[kind="primary"] {{
+        background: var(--gradient-blue);
         color: white;
         border: none;
-    }
-    section[data-testid="stSidebar"] .stButton button[kind="secondary"] {
-        background: rgba(255,255,255,0.05);
-        color: #94a3b8;
-        border: 1px solid rgba(255,255,255,0.08);
-    }
-    .sidebar-title {
+    }}
+    section[data-testid="stSidebar"] .stButton button[kind="secondary"] {{
+        background: rgba(128,128,128,0.05);
+        color: var(--text-muted-dark);
+        border: 1px solid var(--border-light);
+    }}
+    .sidebar-title {{
         font-weight: 700;
         font-size: clamp(0.75rem, 1.2vw, 0.85rem);
-        color: #64748b;
+        color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 1.2px;
         margin-bottom: 0.75rem;
-    }
+    }}
 
     /* ── Dividers ── */
-    .divider {
+    .divider {{
         height: 1px;
         background: linear-gradient(90deg, transparent, rgba(59,130,246,0.15), transparent);
         margin: 1.2rem 0;
-    }
+    }}
 
     /* ── Footer ── */
-    .footer {
+    .footer {{
         margin-top: 2rem;
         padding: 1rem 0;
-        border-top: 1px solid rgba(255,255,255,0.04);
+        border-top: 1px solid var(--border-light);
         text-align: center;
-        color: #334155;
+        color: var(--text-dim);
         font-size: clamp(0.6rem, 1.2vw, 0.75rem);
-    }
+    }}
 
     /* ── Plotly chart responsiveness ── */
-    .stPlotlyChart, .js-plotly-plot, .plot-container {
+    .stPlotlyChart, .js-plotly-plot, .plot-container {{
         width: 100% !important;
         max-width: 100% !important;
-    }
+    }}
 
     /* ── File uploader responsiveness ── */
-    .stFileUploader [data-testid="stFileUploadDropzone"] {
+    .stFileUploader [data-testid="stFileUploadDropzone"] {{
         padding: clamp(0.5rem, 2vw, 1rem) !important;
         min-height: 44px;
-    }
-    .stFileUploader [data-testid="stFileUploadDropzone"] small {
+    }}
+    .stFileUploader [data-testid="stFileUploadDropzone"] small {{
         font-size: clamp(0.6rem, 1.2vw, 0.75rem) !important;
-    }
+    }}
 
     /* ── Text input / slider responsiveness ── */
-    .stTextInput input, .stSlider [data-baseweb="slider"] {
+    .stTextInput input, .stSlider [data-baseweb="slider"] {{
         font-size: clamp(0.75rem, 1.2vw, 0.85rem) !important;
-    }
+    }}
 
-    /* ── Streamlit column stacking on narrow screens ── */
-    @media (max-width: 640px) {
-        .row-widget.stColumns {
+    /* ── Column stacking on narrow screens ── */
+    @media (max-width: 640px) {{
+        .row-widget.stColumns {{
             flex-direction: column !important;
-        }
-        .row-widget.stColumns > div {
+        }}
+        .row-widget.stColumns > div {{
             width: 100% !important;
             flex: 1 1 100% !important;
             min-width: 0 !important;
-        }
-    }
+        }}
+    }}
 
     /* ── Tablet: 641px - 1024px ── */
-    @media (min-width: 641px) and (max-width: 1024px) {
-        .main > .block-container {
+    @media (min-width: 641px) and (max-width: 1024px) {{
+        .main > .block-container {{
             padding-left: 1rem !important;
             padding-right: 1rem !important;
-        }
-        .nav-bar {
+        }}
+        .nav-bar {{
             padding: 0.6rem 1rem;
             margin: -1rem -1rem 0.8rem -1rem;
-        }
-        .metric-grid {
+        }}
+        .metric-grid {{
             grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
             gap: 0.5rem;
-        }
-    }
+        }}
+    }}
 
     /* ── Mobile landscape: 481px - 640px ── */
-    @media (min-width: 481px) and (max-width: 640px) {
-        .main > .block-container {
+    @media (min-width: 481px) and (max-width: 640px) {{
+        .main > .block-container {{
             padding-left: 0.75rem !important;
             padding-right: 0.75rem !important;
-        }
-        .nav-bar {
+        }}
+        .nav-bar {{
             padding: 0.5rem 0.75rem;
             margin: -1rem -1rem 0.6rem -1rem;
             flex-wrap: wrap;
             gap: 0.3rem;
-        }
-        .nav-subtitle {
-            display: none;
-        }
-        .metric-grid {
+        }}
+        .nav-subtitle {{ display: none; }}
+        .metric-grid {{
             grid-template-columns: repeat(2, 1fr);
             gap: 0.4rem;
-        }
-        .metric-card {
-            padding: 0.7rem 0.6rem;
-        }
-        .rank-card > div:first-child {
-            gap: 0.5rem !important;
-        }
-    }
+        }}
+        .metric-card {{ padding: 0.7rem 0.6rem; }}
+        .rank-card > div:first-child {{ gap: 0.5rem !important; }}
+    }}
 
     /* ── Mobile portrait: <= 480px ── */
-    @media (max-width: 480px) {
-        .main > .block-container {
+    @media (max-width: 480px) {{
+        .main > .block-container {{
             padding-left: 0.5rem !important;
             padding-right: 0.5rem !important;
-        }
-        .nav-bar {
+        }}
+        .nav-bar {{
             padding: 0.4rem 0.5rem;
             margin: -1rem -1rem 0.5rem -1rem;
             flex-wrap: wrap;
-        }
-        .nav-logo {
-            width: 28px; height: 28px;
-            font-size: 0.9rem;
-        }
-        .nav-subtitle {
-            display: none;
-        }
-        .metric-grid {
+        }}
+        .nav-logo {{ width: 28px; height: 28px; font-size: 0.9rem; }}
+        .nav-subtitle {{ display: none; }}
+        .metric-grid {{
             grid-template-columns: repeat(2, 1fr);
             gap: 0.35rem;
-        }
-        .metric-card {
-            padding: 0.6rem 0.5rem;
-            border-radius: 8px;
-        }
-        .metric-card .accent-line {
-            height: 2px;
-        }
-        .rank-card {
-            padding: 0.5rem 0.6rem;
-            border-radius: 8px;
-        }
-        .rank-card > div:first-child {
-            flex-wrap: wrap;
-            gap: 0.3rem !important;
-        }
-        .rank-number {
-            min-width: 1.5rem;
-        }
-        .stTabs [data-baseweb="tab"] {
-            font-size: 0.7rem;
-            padding: 0.3rem 0.5rem;
-        }
-        .nav-version {
-            display: none;
-        }
-        .footer {
-            font-size: 0.55rem;
-            padding: 0.5rem 0;
-        }
-    }
+        }}
+        .metric-card {{ padding: 0.6rem 0.5rem; border-radius: 8px; }}
+        .metric-card .accent-line {{ height: 2px; }}
+        .rank-card {{ padding: 0.5rem 0.6rem; border-radius: 8px; }}
+        .rank-card > div:first-child {{ flex-wrap: wrap; gap: 0.3rem !important; }}
+        .rank-number {{ min-width: 1.5rem; }}
+        .stTabs [data-baseweb="tab"] {{ font-size: 0.7rem; padding: 0.3rem 0.5rem; }}
+        .nav-version {{ display: none; }}
+        .footer {{ font-size: 0.55rem; padding: 0.5rem 0; }}
+    }}
 
     /* ── Large screens: > 1440px ── */
-    @media (min-width: 1441px) {
-        .main > .block-container {
+    @media (min-width: 1441px) {{
+        .main > .block-container {{
             max-width: 1600px;
             margin: 0 auto;
             padding-left: 2rem !important;
             padding-right: 2rem !important;
-        }
-        .nav-bar {
-            padding: 0.8rem 2rem;
-        }
-        .metric-grid {
+        }}
+        .nav-bar {{ padding: 0.8rem 2rem; }}
+        .metric-grid {{
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 1rem;
-        }
-    }
+        }}
+    }}
 
     /* ── Ultra-wide: > 1900px ── */
-    @media (min-width: 1901px) {
-        .main > .block-container {
+    @media (min-width: 1901px) {{
+        .main > .block-container {{
             max-width: 1800px;
             padding-left: 3rem !important;
             padding-right: 3rem !important;
-        }
-        .metric-grid {
+        }}
+        .metric-grid {{
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        }
-    }
+        }}
+    }}
 </style>"""
 
 st.markdown(ENTERPRISE_CSS, unsafe_allow_html=True)
@@ -609,7 +695,8 @@ def parse_tabular_data(df):
     return candidates
 
 
-def make_metric_card(value, label, accent_color="#3b82f6", trend=None):
+def make_metric_card(value, label, accent_color=None, trend=None):
+    accent = accent_color or "var(--accent-blue)"
     trend_html = ""
     if trend:
         cls = "up" if trend > 0 else "down"
@@ -617,7 +704,7 @@ def make_metric_card(value, label, accent_color="#3b82f6", trend=None):
         trend_html = f'<div class="metric-trend {cls}">{arrow} {abs(trend)}%</div>'
     return f"""
     <div class="metric-card">
-        <div class="accent-line" style="background:linear-gradient(90deg, {accent_color}, #8b5cf6);"></div>
+        <div class="accent-line" style="background:linear-gradient(90deg, {accent}, var(--accent-purple));"></div>
         <div class="metric-value">{value}</div>
         <div class="metric-label">{label}</div>
         {trend_html}
@@ -636,9 +723,26 @@ def badge_html(penalty):
 # ── Sidebar ─────────────────────────────────────────────────────────────────
 
 with st.sidebar:
+    # ── Theme toggle ──
+    col_theme_label, col_theme_btn = st.columns([3, 1])
+    with col_theme_label:
+        st.markdown(
+            f'<div class="sidebar-title" style="margin-bottom:0;">'
+            f'{"☀️ Light" if THEME == "dark" else "🌙 Dark"} Mode</div>',
+            unsafe_allow_html=True,
+        )
+    with col_theme_btn:
+        icon = "☀️" if THEME == "dark" else "🌙"
+        if st.button(icon, help=f"Switch to {'Light' if THEME == 'dark' else 'Dark'} theme", use_container_width=True):
+            new_theme = "light" if THEME == "dark" else "dark"
+            st.session_state["theme"] = new_theme
+            st.rerun()
+
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+
+    # Data Source
     st.markdown('<div class="sidebar-title">\U0001F4E5 Data Source</div>', unsafe_allow_html=True)
 
-    # File upload (JSON + CSV + Excel)
     uploaded_file = st.file_uploader(
         "Upload file",
         type=["json", "csv", "xlsx", "xls"],
@@ -649,7 +753,6 @@ with st.sidebar:
     if uploaded_file is not None:
         try:
             ext = uploaded_file.name.split(".")[-1].lower()
-
             if ext == "json":
                 raw = uploaded_file.read().decode("utf-8")
                 candidates = parse_json_input(raw)
@@ -661,8 +764,7 @@ with st.sidebar:
                 candidates = parse_tabular_data(df)
 
             st.success(f"\u2713 Loaded {len(candidates)} candidates")
-            if st.button("\U0001F680 Run Ranker",
-                         type="primary", use_container_width=True):
+            if st.button("\U0001F680 Run Ranker", type="primary", use_container_width=True):
                 with st.spinner("Ranking..."):
                     run_ranker(candidates, f"File: {uploaded_file.name}")
         except Exception as e:
@@ -680,8 +782,7 @@ with st.sidebar:
             try:
                 candidates = parse_json_input(pasted)
                 st.success(f"\u2713 Parsed {len(candidates)} candidates")
-                if st.button("\U0001F680 Run on Pasted Data",
-                             type="primary", use_container_width=True):
+                if st.button("\U0001F680 Run on Pasted Data", type="primary", use_container_width=True):
                     with st.spinner("Ranking..."):
                         run_ranker(candidates, "Pasted JSON")
             except Exception as e:
@@ -691,8 +792,7 @@ with st.sidebar:
 
     # Sample data
     st.markdown('<div class="sidebar-title">\U0001F4CA Sample</div>', unsafe_allow_html=True)
-    if st.button("\U0001F504 Run Sample (20 candidates)",
-                 type="secondary", use_container_width=True):
+    if st.button("\U0001F504 Run Sample (20 candidates)", type="secondary", use_container_width=True):
         with st.spinner("Running..."):
             if not os.path.exists(SAMPLE_PATH):
                 st.error("Sample data not found")
@@ -710,7 +810,7 @@ with st.sidebar:
             label = name.replace("_", " ").title()
             st.markdown(
                 f'<div style="display:flex;justify-content:space-between;'
-                f'color:#64748b;font-size:0.8rem;margin-bottom:0.15rem;">'
+                f'color:var(--text-muted);font-size:0.8rem;margin-bottom:0.15rem;">'
                 f'<span>{label}</span><span>{weight*100:.0f}%</span></div>',
                 unsafe_allow_html=True
             )
@@ -732,9 +832,11 @@ if "rankings" in st.session_state:
     clean_count = total - honeypot_count - suspicious_count
 
     # ── Enterprise Metric Cards ──
-    st.markdown(f'<div style="color:#64748b;font-size:0.8rem;margin-bottom:0.5rem;">'
-                f'Source: {source} &bull; {time.strftime("%b %d, %Y %H:%M")}</div>',
-                unsafe_allow_html=True)
+    st.markdown(
+        f'<div style="color:var(--text-muted);font-size:0.8rem;margin-bottom:0.5rem;">'
+        f'Source: {source} &bull; {time.strftime("%b %d, %Y %H:%M")}</div>',
+        unsafe_allow_html=True,
+    )
 
     st.markdown(f"""
     <div class="metric-grid">
@@ -778,11 +880,11 @@ if "rankings" in st.session_state:
                 annotation_font=dict(color="#3b82f6", size=10),
             )
             fig.update_layout(
-                title=dict(text="<b>Score Distribution</b>", font=dict(color="#e2e8f0", size=14)),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#64748b", size=11),
-                xaxis=dict(title="Score", gridcolor="rgba(255,255,255,0.03)", zeroline=False),
-                yaxis=dict(title="Candidates", gridcolor="rgba(255,255,255,0.03)", zeroline=False),
+                title=dict(text="<b>Score Distribution</b>", font=dict(color=P["text_primary"], size=14)),
+                paper_bgcolor=P["chart_bg"], plot_bgcolor=P["chart_bg"],
+                font=dict(color=P["text_muted"], size=11),
+                xaxis=dict(title="Score", gridcolor=P["chart_grid"], zeroline=False),
+                yaxis=dict(title="Candidates", gridcolor=P["chart_grid"], zeroline=False),
                 margin=dict(l=30, r=30, t=40, b=30),
                 hovermode="x", bargap=0.06,
             )
@@ -795,34 +897,37 @@ if "rankings" in st.session_state:
 
             fig2 = go.Figure(data=[go.Pie(
                 labels=labels, values=values,
-                marker=dict(colors=colors, line=dict(color="#0a0e17", width=2)),
+                marker=dict(colors=colors, line=dict(color=P["bg_primary"], width=2)),
                 textinfo="label+percent",
-                textfont=dict(color="#e2e8f0", size=12),
+                textfont=dict(color=P["text_primary"], size=12),
                 hovertemplate="%{label}: %{value} (%{percent})<extra></extra>",
                 hole=0.55,
             )])
             fig2.update_layout(
-                title=dict(text="<b>Candidate Integrity</b>", font=dict(color="#e2e8f0", size=14)),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#64748b", size=11),
+                title=dict(text="<b>Candidate Integrity</b>", font=dict(color=P["text_primary"], size=14)),
+                paper_bgcolor=P["chart_bg"], plot_bgcolor=P["chart_bg"],
+                font=dict(color=P["text_muted"], size=11),
                 margin=dict(l=20, r=20, t=40, b=20),
                 showlegend=False,
                 annotations=[dict(
                     text=f"{clean_count}<br>Verified",
                     x=0.5, y=0.5,
-                    font=dict(size=16, color="#34d399"),
+                    font=dict(size=16, color=P["success"]),
                     showarrow=False,
                 )],
             )
             st.plotly_chart(fig2, use_container_width=True)
 
         # ── Top 5 Quick View ──
-        st.markdown('<h4 style="color:#e2e8f0;font-size:1rem;margin:1rem 0 0.5rem 0;">\U0001F525 Top 5 Candidates</h4>',
-                    unsafe_allow_html=True)
+        st.markdown(
+            '<h4 style="color:var(--text-primary);font-size:1rem;margin:1rem 0 0.5rem 0;">'
+            '\U0001F525 Top 5 Candidates</h4>',
+            unsafe_allow_html=True,
+        )
 
         for rank, (score, cid, reasoning, penalty, issues) in enumerate(rankings[:5], 1):
             pct = min(score * 100, 100)
-            bar_color = "#f87171" if penalty < 0.3 else ("#fbbf24" if penalty < 0.8 else "#34d399")
+            bar_color = P["danger"] if penalty < 0.3 else (P["warning"] if penalty < 0.8 else P["success"])
 
             st.markdown(f"""
             <div class="rank-card">
@@ -850,9 +955,11 @@ if "rankings" in st.session_state:
             search_term = st.text_input("\U0001F50D Search", placeholder="Candidate ID...")
             min_score = st.slider("Min Score", 0.0, 1.0, 0.7, 0.01)
         with col_right:
-            st.markdown(f'<div style="color:#64748b;font-size:0.85rem;margin-bottom:0.5rem;">'
-                        f'Showing {len(rankings)} candidates | Sorted by score (desc)</div>',
-                        unsafe_allow_html=True)
+            st.markdown(
+                f'<div style="color:var(--text-muted);font-size:0.85rem;margin-bottom:0.5rem;">'
+                f'Showing {len(rankings)} candidates | Sorted by score (desc)</div>',
+                unsafe_allow_html=True,
+            )
 
             for rank, (score, cid, reasoning, penalty, issues) in enumerate(rankings, 1):
                 if score < min_score:
@@ -861,11 +968,11 @@ if "rankings" in st.session_state:
                     continue
 
                 pct = min(score * 100, 100)
-                bar_color = "#f87171" if penalty < 0.3 else ("#fbbf24" if penalty < 0.8 else "#34d399")
+                bar_color = P["danger"] if penalty < 0.3 else (P["warning"] if penalty < 0.8 else P["success"])
 
                 issues_html = ""
                 if issues:
-                    issues_html = f'<div style="color:#f87171;font-size:0.75rem;margin-top:0.2rem;">\u26A0 {"; ".join(issues[:2])}</div>'
+                    issues_html = f'<div style="color:{P["danger"]};font-size:0.75rem;margin-top:0.2rem;">\u26A0 {"; ".join(issues[:2])}</div>'
 
                 st.markdown(f"""
                 <div class="rank-card" style="animation-delay:{(rank % 20) * 0.02}s">
@@ -892,14 +999,15 @@ if "rankings" in st.session_state:
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown('<h4 style="color:#e2e8f0;font-size:0.95rem;">Detection Summary</h4>',
-                        unsafe_allow_html=True)
+            st.markdown(
+                '<h4 style="color:var(--text-primary);font-size:0.95rem;">Detection Summary</h4>',
+                unsafe_allow_html=True,
+            )
 
             # Honeypot issue frequency
             all_issues = []
             for _, _, _, _, issues in rankings:
                 for i in issues:
-                    # Categorize
                     if "timeline" in i:
                         all_issues.append("Timeline inconsistency")
                     elif "overlapping" in i:
@@ -938,21 +1046,23 @@ if "rankings" in st.session_state:
                     text="Count",
                 )
                 fig3.update_layout(
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#64748b", size=11),
-                    xaxis=dict(gridcolor="rgba(255,255,255,0.03)", title=""),
+                    paper_bgcolor=P["chart_bg"], plot_bgcolor=P["chart_bg"],
+                    font=dict(color=P["text_muted"], size=11),
+                    xaxis=dict(gridcolor=P["chart_grid"], title=""),
                     yaxis=dict(title=""),
                     margin=dict(l=10, r=10, t=10, b=10),
                     showlegend=False,
                 )
-                fig3.update_traces(textposition="outside", textfont=dict(color="#e2e8f0"))
+                fig3.update_traces(textposition="outside", textfont=dict(color=P["text_primary"]))
                 st.plotly_chart(fig3, use_container_width=True)
             else:
                 st.info("No issues detected in top ranks.")
 
         with col2:
-            st.markdown('<h4 style="color:#e2e8f0;font-size:0.95rem;">Score vs Penalty</h4>',
-                        unsafe_allow_html=True)
+            st.markdown(
+                '<h4 style="color:var(--text-primary);font-size:0.95rem;">Score vs Penalty</h4>',
+                unsafe_allow_html=True,
+            )
 
             scatter_data = pd.DataFrame({
                 "Score": [r[0] for r in rankings],
@@ -963,17 +1073,17 @@ if "rankings" in st.session_state:
 
             fig4 = px.scatter(
                 scatter_data, x="Score", y="Penalty", color="Status",
-                color_discrete_map={"Verified": "#34d399", "Suspicious": "#fbbf24", "Honeypot": "#f87171"},
+                color_discrete_map={"Verified": P["success"], "Suspicious": P["warning"], "Honeypot": P["danger"]},
                 opacity=0.7, size=[8] * len(scatter_data),
                 hover_data={"Status": True},
             )
             fig4.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#64748b", size=11),
-                xaxis=dict(gridcolor="rgba(255,255,255,0.03)", range=[0.5, 1.0]),
-                yaxis=dict(gridcolor="rgba(255,255,255,0.03)", range=[0, 1.0]),
+                paper_bgcolor=P["chart_bg"], plot_bgcolor=P["chart_bg"],
+                font=dict(color=P["text_muted"], size=11),
+                xaxis=dict(gridcolor=P["chart_grid"], range=[0.5, 1.0]),
+                yaxis=dict(gridcolor=P["chart_grid"], range=[0, 1.0]),
                 margin=dict(l=10, r=10, t=10, b=10),
-                legend=dict(font=dict(color="#64748b")),
+                legend=dict(font=dict(color=P["text_muted"])),
             )
             st.plotly_chart(fig4, use_container_width=True)
 
@@ -982,24 +1092,23 @@ if "rankings" in st.session_state:
         col_info1, col_info2, col_info3 = st.columns(3)
         with col_info1:
             st.markdown(
-                f'<div style="color:#64748b;font-size:0.85rem;">'
-                f'<strong style="color:#94a3b8;">Engine:</strong> 10-component ranker</div>',
+                f'<div style="color:var(--text-muted);font-size:0.85rem;">'
+                f'<strong style="color:var(--text-muted-dark);">Engine:</strong> 10-component ranker</div>',
                 unsafe_allow_html=True)
         with col_info2:
             st.markdown(
-                f'<div style="color:#64748b;font-size:0.85rem;">'
-                f'<strong style="color:#94a3b8;">Honeypot checks:</strong> 11</div>',
+                f'<div style="color:var(--text-muted);font-size:0.85rem;">'
+                f'<strong style="color:var(--text-muted-dark);">Honeypot checks:</strong> 11</div>',
                 unsafe_allow_html=True)
         with col_info3:
             st.markdown(
-                f'<div style="color:#64748b;font-size:0.85rem;">'
-                f'<strong style="color:#94a3b8;">Throughput:</strong> {total/elapsed:.0f} cand/s</div>',
+                f'<div style="color:var(--text-muted);font-size:0.85rem;">'
+                f'<strong style="color:var(--text-muted-dark);">Throughput:</strong> {total/elapsed:.0f} cand/s</div>',
                 unsafe_allow_html=True)
 
     # Clear button
     st.markdown('<div style="text-align:center;margin-top:1rem;">', unsafe_allow_html=True)
-    if st.button("\U0001F5D1 Clear & Start Over",
-                 type="secondary", use_container_width=False):
+    if st.button("\U0001F5D1 Clear & Start Over", type="secondary", use_container_width=False):
         for key in ["rankings", "elapsed", "total", "source", "active_tab"]:
             if key in st.session_state:
                 del st.session_state[key]
@@ -1011,14 +1120,14 @@ else:
     col_intro, col_preview = st.columns([1.5, 1])
 
     with col_intro:
-        st.markdown("""
-        <div style="background:linear-gradient(135deg,rgba(30,41,59,0.6),rgba(15,23,42,0.6));
-                    border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:2rem;">
-            <h3 style="color:#e2e8f0;margin:0 0 0.5rem 0;font-size:1.3rem;">
+        st.markdown(f"""
+        <div style="background:linear-gradient(135deg,var(--bg-welcome),var(--bg-card-alt));
+                    border:1px solid var(--border-card);border-radius:14px;padding:2rem;">
+            <h3 style="color:var(--text-primary);margin:0 0 0.5rem 0;font-size:1.3rem;">
                 \U0001F44B Welcome to Candidate Ranker
             </h3>
-            <p style="color:#94a3b8;font-size:0.95rem;line-height:1.6;">
-            Enterprise-grade candidate ranking for <strong style="color:#e2e8f0;">Senior AI Engineer</strong>
+            <p style="color:var(--text-muted-dark);font-size:0.95rem;line-height:1.6;">
+            Enterprise-grade candidate ranking for <strong style="color:var(--text-primary);">Senior AI Engineer</strong>
             roles. Upload your candidate data in <strong>JSON</strong>, <strong>CSV</strong>, or
             <strong>Excel</strong> format and get instant AI-powered rankings.
             </p>
@@ -1026,30 +1135,30 @@ else:
                 <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.15);
                             border-radius:8px;padding:0.6rem 1rem;text-align:center;flex:1;min-width:100px;">
                     <div style="font-size:1.3rem;">\U0001F4E5</div>
-                    <div style="color:#64748b;font-size:0.7rem;margin-top:0.2rem;">Upload</div>
+                    <div style="color:var(--text-muted);font-size:0.7rem;margin-top:0.2rem;">Upload</div>
                 </div>
                 <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.15);
                             border-radius:8px;padding:0.6rem 1rem;text-align:center;flex:1;min-width:100px;">
                     <div style="font-size:1.3rem;">\U0001F4CA</div>
-                    <div style="color:#64748b;font-size:0.7rem;margin-top:0.2rem;">Analyze</div>
+                    <div style="color:var(--text-muted);font-size:0.7rem;margin-top:0.2rem;">Analyze</div>
                 </div>
                 <div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.15);
                             border-radius:8px;padding:0.6rem 1rem;text-align:center;flex:1;min-width:100px;">
                     <div style="font-size:1.3rem;">\U0001F3C5</div>
-                    <div style="color:#64748b;font-size:0.7rem;margin-top:0.2rem;">Rank</div>
+                    <div style="color:var(--text-muted);font-size:0.7rem;margin-top:0.2rem;">Rank</div>
                 </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
     with col_preview:
-        st.markdown("""
-        <div style="background:linear-gradient(135deg,rgba(30,41,59,0.4),rgba(15,23,42,0.4));
-                    border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:1.5rem;">
-            <h4 style="color:#e2e8f0;margin:0 0 0.5rem 0;font-size:0.95rem;">
+        st.markdown(f"""
+        <div style="background:linear-gradient(135deg,var(--bg-preview),var(--bg-card-alt));
+                    border:1px solid var(--border-light);border-radius:14px;padding:1.5rem;">
+            <h4 style="color:var(--text-primary);margin:0 0 0.5rem 0;font-size:0.95rem;">
                 \U0001F4CB Supported Formats
             </h4>
-            <div style="color:#94a3b8;font-size:0.85rem;line-height:1.8;">
+            <div style="color:var(--text-muted-dark);font-size:0.85rem;line-height:1.8;">
                 <div>\U0001F4C4 <strong>JSON</strong> &mdash; Array of candidate objects</div>
                 <div>\U0001F4C4 <strong>CSV</strong> &mdash; Flat column format</div>
                 <div>\U0001F4C4 <strong>Excel</strong> &mdash; .xlsx / .xls files</div>
@@ -1062,23 +1171,23 @@ else:
         with open(SAMPLE_PATH) as f:
             samples = json.load(f)
         st.markdown(f"""
-        <div style="margin-top:1rem;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);
+        <div style="margin-top:1rem;background:var(--bg-sample);border:1px solid var(--border-light);
                     border-radius:10px;padding:1rem;">
-            <h4 style="color:#64748b;margin:0 0 0.5rem 0;font-size:0.85rem;text-transform:uppercase;
+            <h4 style="color:var(--text-muted);margin:0 0 0.5rem 0;font-size:0.85rem;text-transform:uppercase;
                        letter-spacing:0.5px;">\U0001F4CB Sample Data Preview</h4>
         """, unsafe_allow_html=True)
         for s in samples[:5]:
             p = s.get("profile", {})
             st.markdown(
-                f'<div style="color:#64748b;font-size:0.8rem;padding:0.2rem 0;'
-                f'border-bottom:1px solid rgba(255,255,255,0.03);">'
-                f'<span style="color:#94a3b8;">{p.get("anonymized_name", "?")}</span>'
+                f'<div style="color:var(--text-muted);font-size:0.8rem;padding:0.2rem 0;'
+                f'border-bottom:1px solid var(--border-light);">'
+                f'<span style="color:var(--text-muted-dark);">{p.get("anonymized_name", "?")}</span>'
                 f' &mdash; {p.get("current_title", "?")} @ {p.get("current_company", "?")}'
                 f'</div>',
                 unsafe_allow_html=True
             )
         st.markdown(
-            f'<div style="color:#475569;font-size:0.75rem;padding-top:0.3rem;">'
+            f'<div style="color:var(--text-dim2);font-size:0.75rem;padding-top:0.3rem;">'
             f'... and {len(samples) - 5} more</div>',
             unsafe_allow_html=True
         )
@@ -1113,11 +1222,14 @@ else:
             - Offer acceptance without interviews
 
             **Performance**
-            - 100K candidates in ~43s (CPU-only)
+            - 100K candidates in ~57s (CPU-only)
             - 16,157 honeypots detected
             - 0 honeypots in top 100
             - 100/100 unique reasonings
             """)
 
-st.markdown('<div class="footer">Built for the Redrob Hackathon &mdash; Intelligent Candidate Discovery &amp; Ranking Challenge</div>',
-            unsafe_allow_html=True)
+st.markdown(
+    '<div class="footer">Built for the Redrob Hackathon &mdash; '
+    'Intelligent Candidate Discovery &amp; Ranking Challenge</div>',
+    unsafe_allow_html=True,
+)
