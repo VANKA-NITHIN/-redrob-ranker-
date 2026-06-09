@@ -496,6 +496,69 @@ class TestHoneypotDetection(unittest.TestCase):
         self.assertLess(penalty, 1.0)
         self.assertTrue(any("duration" in i for i in issues))
 
+    def test_salary_range_inverted(self):
+        """Check 9: min > max should flag as honeypot."""
+        candidate = _make_candidate(
+            redrob_signals={
+                **_make_candidate()["redrob_signals"],
+                "expected_salary_range_inr_lpa": {"min": 50, "max": 20},
+            }
+        )
+        penalty, issues = detect_honeypot(candidate)
+        self.assertLess(penalty, 1.0)
+        self.assertTrue(any("inverted" in i for i in issues),
+                        f"Expected 'inverted' in issues but got: {issues}")
+
+    def test_salary_single_point_suspicious(self):
+        """Check 9: min == max should be mildly suspicious."""
+        candidate = _make_candidate(
+            redrob_signals={
+                **_make_candidate()["redrob_signals"],
+                "expected_salary_range_inr_lpa": {"min": 30, "max": 30},
+            }
+        )
+        penalty, issues = detect_honeypot(candidate)
+        self.assertLess(penalty, 1.0)
+        self.assertTrue(any("single point" in i for i in issues),
+                        f"Expected 'single point' in issues but got: {issues}")
+
+    def test_signup_after_last_active(self):
+        """Check 10: last active before signup date."""
+        candidate = _make_candidate(
+            redrob_signals={
+                **_make_candidate()["redrob_signals"],
+                "signup_date": "2025-06-01",
+                "last_active_date": "2024-01-01",
+            }
+        )
+        penalty, issues = detect_honeypot(candidate)
+        self.assertLess(penalty, 1.0)
+        self.assertTrue(any("before signup" in i for i in issues),
+                        f"Expected 'before signup' in issues but got: {issues}")
+
+    def test_offer_acceptance_no_interviews(self):
+        """Check 11: high offer rate with 0% interviews."""
+        candidate = _make_candidate(
+            redrob_signals={
+                **_make_candidate()["redrob_signals"],
+                "offer_acceptance_rate": 0.8,
+                "interview_completion_rate": 0,
+            }
+        )
+        penalty, issues = detect_honeypot(candidate)
+        self.assertLess(penalty, 1.0)
+        self.assertTrue(any("offer acceptance" in i for i in issues),
+                        f"Expected 'offer acceptance' in issues but got: {issues}")
+
+    def test_new_checks_do_not_false_flag_clean(self):
+        """A clean candidate with normal salary/dates/interviews should not trigger new checks."""
+        candidate = _make_candidate()  # Default has min=25, max=45, signup=2020-01-01, last_active=2025-12-01
+        penalty, issues = detect_honeypot(candidate)
+        # Should have no salary/date/offer issues
+        salary_issues = [i for i in issues if any(kw in i for kw in ["salary", "signup", "offer"])]
+        self.assertEqual(len(salary_issues), 0,
+                         f"Clean candidate triggered false positive: {salary_issues}")
+
 
 class TestComputeTotalScore(unittest.TestCase):
     """Test the full scoring pipeline."""

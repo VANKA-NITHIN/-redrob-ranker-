@@ -7,13 +7,14 @@ Ranks **100,000 candidates** for a **Senior AI Engineer (Founding Team)** role u
 | Metric | Value |
 |--------|-------|
 | Candidates processed | 100,000 |
-| Runtime (CPU only) | ~92 seconds |
+| Runtime (CPU only) | **~43 seconds** — 2x faster than 5-min limit |
 | Top score | 0.9135 |
-| Bottom score (rank 100) | 0.7526 |
-| Honeypots detected | 13,135 (13.1%) |
+| Bottom score (rank 100) | 0.7469 |
+| Honeypots detected | **16,157 (16.2%)** — 11 detection checks |
 | Honeypots in top 100 | **0** ✅ |
+| Unique reasonings | **100/100** ✅ — no two candidates share identical reasoning |
 | Submission validation | ✅ Passed |
-| Tests | 34/34 ✅ |
+| Tests | 39/39 ✅ — 5 tests for 3 new honeypot checks |
 
 ## 🧠 Architecture
 
@@ -32,7 +33,7 @@ Ranks **100,000 candidates** for a **Senior AI Engineer (Founding Team)** role u
 | **Location** | +3% | Pune/Noida preferred, relocation bonus per JD |
 | **Notice Period** | +2% | Sub-30 day notice preferred per JD |
 
-### Honeypot Detection (8 Checks)
+### Honeypot Detection (11 Checks)
 
 1. **Timeline inconsistency** — graduated recently but has implausible years of experience
 2. **Overlapping education** — attended multiple institutions concurrently (13% of candidates)
@@ -42,6 +43,9 @@ Ranks **100,000 candidates** for a **Senior AI Engineer (Founding Team)** role u
 6. **Missing/short descriptions** — empty or very short (<30 chars) career descriptions
 7. **Job-hopping / zero-duration jobs** — 5+ jobs with 0 reported duration or compressed timeline
 8. **Summary mismatch** — many production AI keywords in summary but none in career history
+9. **Salary range inversion** — min > max (impossible salary expectation)
+10. **Signup/active date mismatch** — last active before signup date
+11. **Offer acceptance without interviews** — >50% offer rate with 0% interview completion
 
 ## 📊 EDA Insights
 
@@ -129,7 +133,7 @@ All scoring parameters are in [`config.py`](config.py):
 1. **Streaming pipeline** — reads candidates line-by-line from JSONL (memory efficient)
 2. **Multi-dimensional scoring** — combines 10 weighted components with exponential normalization
 3. **Top-K heap** — maintains top 100 candidates via min-heap (O(n log k))
-4. **Honeypot filtering** — 8 detection checks with multiplicative penalties
+4. **Honeypot filtering** — 11 detection checks with multiplicative penalties
 5. **Deterministic tie-breaking** — rounded scores + candidate_id ascending for reproducible rankings
 
 ### Key Design Decisions
