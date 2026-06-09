@@ -1266,8 +1266,9 @@ with st.sidebar:
         st.markdown('<div class="sidebar-title">\U0001F4E5 Export</div>', unsafe_allow_html=True)
 
         # Build export data
+        sidebar_rankings = st.session_state["rankings"]
         export_rows = []
-        for rank, (score, cid, reasoning, penalty, issues) in enumerate(rankings, 1):
+        for rank, (score, cid, reasoning, penalty, issues) in enumerate(sidebar_rankings, 1):
             badge = "HONEYPOT" if penalty < 0.3 else ("SUSPICIOUS" if penalty < 0.8 else "VERIFIED")
             export_rows.append({
                 "Rank": rank,
