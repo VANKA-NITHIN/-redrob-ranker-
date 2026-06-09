@@ -621,7 +621,7 @@ ENTERPRISE_CSS = f"""
     }}
 
     /* ── Popover styling ── */
-    div[data-testid="stPopover"] button {
+    div[data-testid="stPopover"] button {{
         border-radius: 10px !important;
         background: var(--bg-card) !important;
         border: 1px solid var(--border-card) !important;
@@ -629,19 +629,19 @@ ENTERPRISE_CSS = f"""
         font-size: 0.85rem !important;
         padding: 0.4rem 0.8rem !important;
         transition: all 0.3s;
-    }
-    div[data-testid="stPopover"] button:hover {
+    }}
+    div[data-testid="stPopover"] button:hover {{
         border-color: var(--accent-blue) !important;
         background: var(--bg-card-alt) !important;
-    }
-    div[data-testid="stPopover"] [data-testid="stPopoverBody"] {
+    }}
+    div[data-testid="stPopover"] [data-testid="stPopoverBody"] {{
         background: var(--popover-bg) !important;
         backdrop-filter: blur(16px);
         border: 1px solid var(--border-color) !important;
         border-radius: 14px !important;
         box-shadow: var(--shadow-lg) !important;
         padding: 0.8rem !important;
-    }
+    }}
 
     /* ── Toast notifications ── */
     div[data-testid="stToast"] {{
