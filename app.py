@@ -1117,23 +1117,77 @@ if "rankings" in st.session_state:
     with tab2:
         col_left, col_right = st.columns([1, 3])
         with col_left:
-            search_term = st.text_input("\U0001F50D Search", placeholder="Candidate ID...")
+            search_term = st.text_input(
+                "\U0001F50D Search",
+                placeholder="ID or keyword...",
+                help="Search by candidate ID or keyword in reasoning",
+            )
+
+            badge_filter = st.selectbox(
+                "Badge",
+                ["All", "Verified", "Suspicious", "Honeypot"],
+                index=0,
+                help="Filter by candidate status",
+            )
+
+            sort_by = st.selectbox(
+                "Sort by",
+                ["Score \u2193", "Score \u2191", "Penalty \u2191", "Penalty \u2193"],
+                index=0,
+                help="Sort candidates",
+            )
+
             min_score = st.slider("Min Score", 0.0, 1.0, 0.7, 0.01)
+
         with col_right:
+            # ── Build filtered + sorted list ──
+            filtered = []
+            for score, cid, reasoning, penalty, issues in rankings:
+                if score < min_score:
+                    continue
+                if search_term:
+                    q = search_term.lower()
+                    if q not in cid.lower() and q not in reasoning.lower():
+                        continue
+                if badge_filter == "Verified" and penalty < 0.8:
+                    continue
+                if badge_filter == "Suspicious" and not (0.3 <= penalty < 0.8):
+                    continue
+                if badge_filter == "Honeypot" and penalty >= 0.3:
+                    continue
+                filtered.append((score, cid, reasoning, penalty, issues))
+
+            # Apply sorting
+            if sort_by == "Score \u2193":
+                filtered.sort(key=lambda x: x[0], reverse=True)
+            elif sort_by == "Score \u2191":
+                filtered.sort(key=lambda x: x[0])
+            elif sort_by == "Penalty \u2191":
+                filtered.sort(key=lambda x: x[3])
+            elif sort_by == "Penalty \u2193":
+                filtered.sort(key=lambda x: x[3], reverse=True)
+
+            total_ranked = len(rankings)
+            shown = len(filtered)
             st.markdown(
                 f'<div style="color:var(--text-muted);font-size:0.85rem;margin-bottom:0.5rem;">'
-                f'Showing {len(rankings)} candidates | Sorted by score (desc)</div>',
+                f'Showing {shown} of {total_ranked} candidates'
+                f'{" | Filtered" if shown < total_ranked else ""}'
+                f' | Sort: {sort_by}</div>',
                 unsafe_allow_html=True,
             )
 
-            for rank, (score, cid, reasoning, penalty, issues) in enumerate(rankings, 1):
-                if score < min_score:
-                    continue
-                if search_term and search_term.lower() not in cid.lower():
-                    continue
-
-                card = _render_rank_card(rank, score, cid, reasoning, penalty, issues, large_style=False)
-                st.markdown(card, unsafe_allow_html=True)
+            if not filtered:
+                st.markdown(
+                    '<div style="text-align:center;color:var(--text-dim);padding:2rem;font-size:0.9rem;">'
+                    '\U0001F50D No candidates match the current filters'
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                for rank, (score, cid, reasoning, penalty, issues) in enumerate(filtered, 1):
+                    card = _render_rank_card(rank, score, cid, reasoning, penalty, issues, large_style=False)
+                    st.markdown(card, unsafe_allow_html=True)
 
         # ── Candidate Profile Viewer ──
         st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
