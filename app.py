@@ -26,13 +26,15 @@ st.set_page_config(
 # ── Enterprise Theme ─────────────────────────────────────────────────────────
 ENTERPRISE_CSS = """
 <style>
+    /* ── Font import must be first ── */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
     /* ── Base ── */
     .stApp { background: #0a0e17; }
     .stApp > header { background: transparent !important; }
     .stApp > header [data-testid="stDecoration"] { display: none; }
 
     /* ── Typography ── */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     html, body, [class*="css"] { font-family: 'Inter', -apple-system, sans-serif; }
 
     /* ── Responsive Container ── */
