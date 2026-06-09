@@ -1117,27 +1117,29 @@ if "rankings" in st.session_state:
     with tab2:
         col_left, col_right = st.columns([1, 3])
         with col_left:
-            search_term = st.text_input(
-                "\U0001F50D Search",
-                placeholder="ID or keyword...",
-                help="Search by candidate ID or keyword in reasoning",
-            )
+            # Hamburger menu popover wrapping all filter/sort controls
+            with st.popover("\u2630 Filter & Sort", use_container_width=True):
+                search_term = st.text_input(
+                    "\U0001F50D Search",
+                    placeholder="ID or keyword...",
+                    help="Search by candidate ID or keyword in reasoning",
+                )
 
-            badge_filter = st.selectbox(
-                "Badge",
-                ["All", "Verified", "Suspicious", "Honeypot"],
-                index=0,
-                help="Filter by candidate status",
-            )
+                badge_filter = st.selectbox(
+                    "Badge",
+                    ["All", "Verified", "Suspicious", "Honeypot"],
+                    index=0,
+                    help="Filter by candidate status",
+                )
 
-            sort_by = st.selectbox(
-                "Sort by",
-                ["Score \u2193", "Score \u2191", "Penalty \u2191", "Penalty \u2193"],
-                index=0,
-                help="Sort candidates",
-            )
+                sort_by = st.selectbox(
+                    "Sort by",
+                    ["Score (High\u2192Low)", "Score (Low\u2192High)", "Penalty (Low\u2192High)", "Penalty (High\u2192Low)"],
+                    index=0,
+                    help="Sort candidates",
+                )
 
-            min_score = st.slider("Min Score", 0.0, 1.0, 0.7, 0.01)
+                min_score = st.slider("Min Score", 0.0, 1.0, 0.7, 0.01)
 
         with col_right:
             # ── Build filtered + sorted list ──
@@ -1158,13 +1160,13 @@ if "rankings" in st.session_state:
                 filtered.append((score, cid, reasoning, penalty, issues))
 
             # Apply sorting
-            if sort_by == "Score \u2193":
+            if sort_by == "Score (High\u2192Low)":
                 filtered.sort(key=lambda x: x[0], reverse=True)
-            elif sort_by == "Score \u2191":
+            elif sort_by == "Score (Low\u2192High)":
                 filtered.sort(key=lambda x: x[0])
-            elif sort_by == "Penalty \u2191":
+            elif sort_by == "Penalty (Low\u2192High)":
                 filtered.sort(key=lambda x: x[3])
-            elif sort_by == "Penalty \u2193":
+            elif sort_by == "Penalty (High\u2192Low)":
                 filtered.sort(key=lambda x: x[3], reverse=True)
 
             total_ranked = len(rankings)
