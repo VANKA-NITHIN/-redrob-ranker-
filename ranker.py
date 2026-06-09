@@ -602,12 +602,47 @@ def detect_honeypot(candidate: dict) -> tuple:
     if summary:
         prod_keywords_in_summary = sum(1 for kw in PRODUCTION_AI_KEYWORDS if kw in summary)
         if prod_keywords_in_summary >= 8:
-            # Check if any career history also has production AI keywords
             hist_desc = " ".join([(h.get("description") or "").lower() for h in history])
             prod_in_hist = sum(1 for kw in PRODUCTION_AI_KEYWORDS if kw in hist_desc)
             if prod_in_hist == 0:
                 penalty *= 0.6
                 issues.append(f"summary has {prod_keywords_in_summary} prod AI keywords but no career matches")
+
+    # --- Check 9: Salary range min > max (impossible salary) ---
+    salary = signals.get("expected_salary_range_inr_lpa", {})
+    if salary:
+        s_min = salary.get("min", 0) or 0
+        s_max = salary.get("max", 0) or 0
+        if s_min > s_max and s_max > 0:
+            penalty *= 0.6
+            issues.append(f"salary range inverted: min={s_min}L > max={s_max}L")
+        elif s_min == s_max and s_min > 0:
+            # Single-point salary is suspicious unless consulting
+            penalty *= 0.85
+            issues.append(f"salary range single point: {s_min}L")
+
+    # --- Check 10: Signup date after last active date ---
+    signup = signals.get("signup_date", "")
+    last_active = signals.get("last_active_date", "")
+    if signup and last_active:
+        try:
+            signup_parts = signup.split("-")
+            active_parts = last_active.split("-")
+            if len(signup_parts) == 3 and len(active_parts) == 3:
+                signup_tuple = tuple(int(p) for p in signup_parts)
+                active_tuple = tuple(int(p) for p in active_parts)
+                if active_tuple < signup_tuple:
+                    penalty *= 0.5
+                    issues.append(f"last active {last_active} before signup {signup}")
+        except (ValueError, IndexError):
+            pass
+
+    # --- Check 11: Offer acceptance rate with zero interview history ---
+    offer_rate = signals.get("offer_acceptance_rate", -1)
+    interview_rate = signals.get("interview_completion_rate", 0)
+    if offer_rate > 0.5 and interview_rate == 0:
+        penalty *= 0.6
+        issues.append(f"offer acceptance {offer_rate:.0%} but 0% interview completion")
 
     return penalty, issues
 
@@ -680,8 +715,8 @@ def compute_total_score(candidate: dict) -> tuple:
 
 
 def generate_reasoning(candidate: dict, score: float, hon_penalty: float, hon_issues: list) -> str:
-    """Generate 1-2 sentence reasoning for the ranking.
-    Stage 4 manual review checks reasoning quality: avoid templated/all-identical/hallucinated."""
+    """Generate varied, specific reasoning for each candidate.
+    Stage 4 judges check: not templated, not identical, not hallucinated."""
     profile = candidate.get("profile", {})
     title = profile.get("current_title", "")
     headline = profile.get("headline", "")
@@ -696,7 +731,7 @@ def generate_reasoning(candidate: dict, score: float, hon_penalty: float, hon_is
 
     parts = []
 
-    # Honeypot warning (if applicable)
+    # Honeypot warning
     if hon_penalty < 0.3:
         parts.append("HIGH-RISK HONEYPOT CANDIDATE")
         if hon_issues:
@@ -706,18 +741,12 @@ def generate_reasoning(candidate: dict, score: float, hon_penalty: float, hon_is
         if hon_issues:
             parts.append(f"({'; '.join(hon_issues[:2])})")
 
-    # Title + company (specific, not just "direct fit")
-    tier = _title_tier(title)
-    if tier == 2:
-        parts.append(f"{title}")
-    elif tier == 1:
-        parts.append(f"{title}")
-    else:
-        parts.append(f"{title}")
+    # Title (always show)
+    parts.append(f"{title}")
 
-    # Experience + company (more specific)
+    # Experience + company
     exp_str = f"{years_exp:.0f}yrs"
-    if company and tier >= 1:
+    if company:
         exp_str += f" at {company}"
     parts.append(exp_str)
 
@@ -730,14 +759,28 @@ def generate_reasoning(candidate: dict, score: float, hon_penalty: float, hon_is
         if kw in history_desc:
             prod_signals.append(kw)
     if prod_signals:
-        parts.append(f"built {', '.join(prod_signals[:4])} systems")
+        # Vary phrasing based on what signals were found
+        if len(prod_signals) >= 4:
+            parts.append(f"built {', '.join(prod_signals[:4])} systems")
+        elif len(prod_signals) >= 2:
+            parts.append(f"experience in {', '.join(prod_signals[:3])}")
+        else:
+            parts.append(f"worked on {prod_signals[0]}")
+
+    # Headline bonus if unique
+    hl = headline.lower()
+    if hl and title.lower() not in hl:
+        if any(kw in hl for kw in ["ai", "ml", "machine learning", "deep learning"]):
+            parts.append("headline signals AI focus")
 
     # Industry/product fit
     industry_lower = industry.lower()
     if any(kw in industry_lower for kw in ["ai", "software", "technology", "internet", "saas", "product"]):
         parts.append("product co")
+    elif any(kw in industry_lower for kw in ["fintech", "healthtech", "edtech"]):
+        parts.append(f"{industry_lower} sector")
 
-    # Behavioral signals (specific)
+    # Behavioral signals
     resp_rate = signals.get("recruiter_response_rate", -1)
     if resp_rate >= 0.7:
         parts.append("very responsive")
@@ -747,12 +790,20 @@ def generate_reasoning(candidate: dict, score: float, hon_penalty: float, hon_is
     if signals.get("open_to_work_flag", False):
         parts.append("actively looking")
 
+    github = signals.get("github_activity_score", -1)
+    if github >= 50:
+        parts.append("active on GitHub")
+
     # Notice period
     notice = signals.get("notice_period_days", 90)
-    if notice <= 30:
+    if notice <= 15:
+        parts.append("immediate join")
+    elif notice <= 30:
         parts.append("short notice")
+    elif notice >= 120:
+        parts.append(f"{notice}d notice")
 
-    # Location (specific, per JD preference)
+    # Location
     if location:
         loc_lower = location.lower()
         if "pune" in loc_lower or "noida" in loc_lower:
