@@ -1636,6 +1636,7 @@ if "rankings" in st.session_state:
 
     # ── Tab 3: Insights ──
     with tab3:
+        candidates_data = st.session_state.get("candidates_data", [])
         col1, col2 = st.columns(2)
 
         with col1:
@@ -1726,6 +1727,193 @@ if "rankings" in st.session_state:
                 legend=dict(font=dict(color=P["text_muted"])),
             )
             st.plotly_chart(fig4, use_container_width=True)
+
+        # ── Row 2: Penalty Distribution + Experience Distribution ──
+        st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+        col3, col4 = st.columns(2)
+
+        with col3:
+            st.markdown(
+                '<h4 style="color:var(--text-primary);font-size:0.95rem;">Penalty Distribution</h4>',
+                unsafe_allow_html=True,
+            )
+
+            penalties = [r[3] for r in rankings]
+            fig_penalty = go.Figure()
+            fig_penalty.add_trace(go.Histogram(
+                x=penalties,
+                nbinsx=15,
+                marker=dict(
+                    color=penalties,
+                    colorscale=[[0, '#f87171'], [0.5, '#fbbf24'], [1, '#34d399']],
+                    line=dict(color='rgba(255,255,255,0.05)', width=1),
+                ),
+                hovertemplate="Penalty: %{x:.3f}<br>Count: %{y}<extra></extra>",
+            ))
+            fig_penalty.add_vline(
+                x=0.3, line_dash="dash", line_color=P["danger"],
+                annotation_text="Honeypot",
+                annotation_position="top left",
+                annotation_font=dict(color=P["danger"], size=10),
+            )
+            fig_penalty.add_vline(
+                x=0.8, line_dash="dash", line_color=P["success"],
+                annotation_text="Verified",
+                annotation_position="top right",
+                annotation_font=dict(color=P["success"], size=10),
+            )
+            fig_penalty.update_layout(
+                paper_bgcolor=P["chart_bg"], plot_bgcolor=P["chart_bg"],
+                font=dict(color=P["text_muted"], size=11),
+                xaxis=dict(title="Penalty Score", gridcolor=P["chart_grid"], zeroline=False),
+                yaxis=dict(title="Candidates", gridcolor=P["chart_grid"], zeroline=False),
+                margin=dict(l=30, r=30, t=10, b=30),
+                hovermode="x", bargap=0.06,
+            )
+            st.plotly_chart(fig_penalty, use_container_width=True)
+
+        with col4:
+            st.markdown(
+                '<h4 style="color:var(--text-primary);font-size:0.95rem;">Experience Distribution</h4>',
+                unsafe_allow_html=True,
+            )
+
+            exp_years = []
+            for c in candidates_data:
+                yrs = c.get("profile", {}).get("years_of_experience", 0) or 0
+                exp_years.append(yrs)
+
+            if exp_years:
+                fig_exp = go.Figure()
+                fig_exp.add_trace(go.Histogram(
+                    x=exp_years,
+                    nbinsx=20,
+                    marker=dict(
+                        color=exp_years,
+                        colorscale=[[0, '#3b82f6'], [0.5, '#8b5cf6'], [1, '#06b6d4']],
+                        line=dict(color='rgba(255,255,255,0.05)', width=1),
+                    ),
+                    hovertemplate="Experience: %{x:.1f} yrs<br>Count: %{y}<extra></extra>",
+                ))
+                fig_exp.update_layout(
+                    paper_bgcolor=P["chart_bg"], plot_bgcolor=P["chart_bg"],
+                    font=dict(color=P["text_muted"], size=11),
+                    xaxis=dict(title="Years of Experience", gridcolor=P["chart_grid"], zeroline=False),
+                    yaxis=dict(title="Candidates", gridcolor=P["chart_grid"], zeroline=False),
+                    margin=dict(l=30, r=30, t=10, b=30),
+                    hovermode="x", bargap=0.06,
+                )
+                st.plotly_chart(fig_exp, use_container_width=True)
+            else:
+                st.info("Experience data not available.")
+
+        # ── Row 3: Top Skills + Education Tier ──
+        st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+        col5, col6 = st.columns(2)
+
+        with col5:
+            st.markdown(
+                '<h4 style="color:var(--text-primary);font-size:0.95rem;">Top Skills</h4>',
+                unsafe_allow_html=True,
+            )
+
+            skill_counter = Counter()
+            for c in candidates_data:
+                for s in c.get("skills", []):
+                    name = s.get("name", "").strip()
+                    if name:
+                        skill_counter[name] += 1
+
+            if skill_counter:
+                top_skills = skill_counter.most_common(15)
+                skill_df = pd.DataFrame([
+                    {"Skill": k, "Count": v}
+                    for k, v in reversed(top_skills)
+                ])
+
+                fig_skills = px.bar(
+                    skill_df, x="Count", y="Skill", orientation="h",
+                    color="Count", color_continuous_scale=["#3b82f6", "#8b5cf6"],
+                    text="Count",
+                )
+                fig_skills.update_layout(
+                    paper_bgcolor=P["chart_bg"], plot_bgcolor=P["chart_bg"],
+                    font=dict(color=P["text_muted"], size=11),
+                    xaxis=dict(gridcolor=P["chart_grid"], title=""),
+                    yaxis=dict(title=""),
+                    margin=dict(l=10, r=10, t=10, b=10),
+                    showlegend=False,
+                )
+                fig_skills.update_traces(
+                    textposition="outside",
+                    textfont=dict(color=P["text_primary"]),
+                )
+                st.plotly_chart(fig_skills, use_container_width=True)
+            else:
+                st.info("No skill data available.")
+
+        with col6:
+            st.markdown(
+                '<h4 style="color:var(--text-primary);font-size:0.95rem;">Education Tier</h4>',
+                unsafe_allow_html=True,
+            )
+
+            tier_counter = Counter()
+            for c in candidates_data:
+                for edu in c.get("education", []):
+                    tier = edu.get("tier", "unknown").lower()
+                    tier_counter[tier] += 1
+
+            if tier_counter:
+                tier_labels = {
+                    "tier_1": "Tier 1 (IIT/NIT)",
+                    "tier_2": "Tier 2",
+                    "tier_3": "Tier 3",
+                    "unknown": "Unknown",
+                }
+                tier_palette = {
+                    "tier_1": "#3b82f6",
+                    "tier_2": "#8b5cf6",
+                    "tier_3": "#fbbf24",
+                    "unknown": "#64748b",
+                }
+
+                tier_df = pd.DataFrame([
+                    {
+                        "Tier": tier_labels.get(k, k.title()),
+                        "Count": v,
+                        "Color": tier_palette.get(k, "#64748b"),
+                    }
+                    for k, v in sorted(tier_counter.items(), key=lambda x: x[1], reverse=True)
+                ])
+
+                fig_tier = go.Figure(data=[go.Pie(
+                    labels=tier_df["Tier"],
+                    values=tier_df["Count"],
+                    marker=dict(
+                        colors=tier_df["Color"].tolist(),
+                        line=dict(color=P["bg_primary"], width=2),
+                    ),
+                    textinfo="label+percent",
+                    textfont=dict(color=P["text_primary"], size=11),
+                    hovertemplate="%{label}: %{value} (%{percent})<extra></extra>",
+                    hole=0.55,
+                )])
+                fig_tier.update_layout(
+                    paper_bgcolor=P["chart_bg"], plot_bgcolor=P["chart_bg"],
+                    font=dict(color=P["text_muted"], size=11),
+                    margin=dict(l=10, r=10, t=10, b=10),
+                    showlegend=False,
+                    annotations=[dict(
+                        text=f"{tier_counter.most_common(1)[0][1]}<br>Top Tier",
+                        x=0.5, y=0.5,
+                        font=dict(size=14, color=P["text_primary"]),
+                        showarrow=False,
+                    )],
+                )
+                st.plotly_chart(fig_tier, use_container_width=True)
+            else:
+                st.info("No education tier data available.")
 
         # Bottom: pipeline info
         st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
