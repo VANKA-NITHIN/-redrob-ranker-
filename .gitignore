@@ -34,6 +34,9 @@ data/*.txt
 
 # Temp/utility scripts
 
+# Generated deploy artifacts
+Dockerfile
+
 # Duplicate output files
 output/submission_cfg9.csv
 output/sample_submission.csv

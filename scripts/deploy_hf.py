@@ -1,49 +1,100 @@
 """
 Deploy Streamlit app to HuggingFace Spaces.
-Usage: set HF_TOKEN=hf_... && python scripts/deploy_hf.py
-
-Get your token at: https://huggingface.co/settings/tokens
+Usage: export HF_TOKEN=hf_... && python scripts/deploy_hf.py
 """
 import os
 from huggingface_hub import HfApi
 
 SPACE_NAME = "redrob-ranker"
-NAMESPACE = "VANKA-NITHIN"
+NAMESPACE = "vankanithin"
 
 hf_token = os.environ.get("HF_TOKEN")
 if not hf_token:
     print("=" * 60)
     print("HuggingFace API Token Required")
     print("=" * 60)
-    print("\n1. Go to: https://huggingface.co/settings/tokens")
-    print("2. Click 'New token' → name it 'redrob-ranker' → Role: 'write'")
+    print()
+    print("1. Go to: https://huggingface.co/settings/tokens")
+    print("2. Click 'New token' -> name it 'redrob-ranker' -> Role: 'write'")
     print("3. Copy the token (starts with hf_)")
-    print("\nThen run:")
-    print('   set HF_TOKEN=hf_your_token_here')
-    print('   python scripts/deploy_hf.py')
-    print("\nOr manually at https://huggingface.co/new-space:")
-    print("  Space Name: redrob-ranker, SDK: Streamlit")
-    print("  Upload: app.py, requirements.txt, config.py, ranker.py")
-    print("  Create data/ folder with sample_candidates.json")
+    print()
+    print("Then run:")
+    print("   export HF_TOKEN=hf_your_token_here")
+    print("   python scripts/deploy_hf.py")
     exit(1)
 
 api = HfApi(token=hf_token)
+print("Authenticated with HuggingFace Hub")
 
-# Check / create Space
+# Try creating Space (HuggingFace accepts: gradio, docker, static for SDK)
+# For Streamlit, need to use 'docker' SDK or create via web UI
 try:
-    api.get_space_repo(f"{NAMESPACE}/{SPACE_NAME}")
-    print(f"Space exists: https://huggingface.co/spaces/{NAMESPACE}/{SPACE_NAME}")
-except Exception:
     api.create_repo(
         repo_id=f"{NAMESPACE}/{SPACE_NAME}",
         repo_type="space",
-        space_sdk="streamlit",
+        space_sdk="docker",
         private=False,
     )
-    print(f"Space created: https://huggingface.co/spaces/{NAMESPACE}/{SPACE_NAME}")
+    print(f"Created Space: https://huggingface.co/spaces/{NAMESPACE}/{SPACE_NAME}")
+except Exception as e:
+    err_msg = str(e)
+    if "409" in err_msg or "already exists" in err_msg.lower():
+        print("Space already exists (OK)")
+    elif "400" in err_msg:
+        print(f"API doesn't support creating Streamlit Spaces directly.")
+        print("Creating via alternative method...")
+        # Try with 'static' SDK (simplest, we can override)
+        try:
+            api.create_repo(
+                repo_id=f"{NAMESPACE}/{SPACE_NAME}",
+                repo_type="space",
+                space_sdk="static",
+                private=False,
+            )
+            print(f"Created Space with static SDK")
+        except Exception as e2:
+            if "409" in str(e2) or "already exists" in str(e2).lower():
+                print("Space already exists (OK)")
+            else:
+                print(f"Could not create space automatically: {e2}")
+                print()
+                print("Please create the Space manually:")
+                print(f"  1. Go to https://huggingface.co/new-space")
+                print(f"  2. Space Name: {SPACE_NAME}")
+                print(f"  3. SDK: Docker (Streamlit support via Dockerfile)")
+                print(f"  4. Create the Space, then re-run this script")
+                exit(1)
+    else:
+        print(f"Error: {e}")
+        print()
+        print("Please create the Space manually:")
+        print(f"  1. Go to https://huggingface.co/new-space")
+        print(f"  2. Space Name: {SPACE_NAME}")
+        print(f"  3. SDK: Docker")
+        print(f"  4. Create the Space, then re-run this script")
+        exit(1)
+
+# Create Dockerfile for Streamlit
+dockerfile_content = """FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 7860
+
+CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0"]
+"""
+with open("Dockerfile", "w") as f:
+    f.write(dockerfile_content)
+print("Created Dockerfile")
 
 # Upload files
 files = [
+    ("Dockerfile", "Dockerfile"),
     ("app.py", "app.py"),
     ("requirements.txt", "requirements.txt"),
     ("config.py", "config.py"),
@@ -52,7 +103,7 @@ files = [
 ]
 for local, remote in files:
     if os.path.exists(local):
-        print(f"Uploading {local}...")
+        print(f"Uploading {local} -> {remote}...")
         api.upload_file(
             path_or_fileobj=local,
             path_in_repo=remote,
@@ -60,7 +111,8 @@ for local, remote in files:
             repo_type="space",
         )
 
-print(f"\n✅ Deployed!")
-print(f"   https://huggingface.co/spaces/{NAMESPACE}/{SPACE_NAME}")
-print(f"   https://{NAMESPACE}-{SPACE_NAME}.hf.space")
-print("(App takes ~2-3 min to build)")
+print()
+print("Done!")
+print(f"Space: https://huggingface.co/spaces/{NAMESPACE}/{SPACE_NAME}")
+print(f"App:   https://{NAMESPACE}-{SPACE_NAME}.hf.space")
+print("(App builds in 2-3 min | check logs at the Space URL)")

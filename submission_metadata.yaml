@@ -20,9 +20,7 @@ team_members:
 # ============================================================
 github_repo: "https://github.com/VANKA-NITHIN/-redrob-ranker-"
 
-sandbox_link: "https://huggingface.co/spaces/VANKA-NITHIN/redrob-ranker"
-  # To deploy: set HF_TOKEN env var, then run: python scripts/deploy_hf.py
-  # Or manually: create Space on huggingface.co, upload app.py + requirements.txt
+sandbox_link: "https://huggingface.co/spaces/vankanithin/redrob-ranker"
 
 reproduce_command: "python ranker.py"
 
