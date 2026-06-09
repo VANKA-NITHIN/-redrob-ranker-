@@ -870,6 +870,7 @@ def _render_candidate_profile(candidate):
     # ── Redrob Signals ──
     st.markdown('<div style="color:var(--text-secondary);font-size:0.85rem;font-weight:600;margin:0.5rem 0 0.3rem 0;">\U0001F4CA Redrob Signals</div>', unsafe_allow_html=True)
     sig_cols = st.columns(4)
+    _cross_mark = "\u2716"
     signal_items = [
         (f"{signals.get('profile_completeness_score', 0):.0f}%", "Completeness"),
         (f"{signals.get('connection_count', 0)}", "Connections"),
@@ -878,7 +879,7 @@ def _render_candidate_profile(candidate):
         (f'{signals.get("interview_completion_rate", 0):.0%}', "Interview Rate"),
         (f"{signals.get('notice_period_days', 0)}d", "Notice Period"),
         ("Yes" if signals.get("open_to_work_flag", False) else "No", "Open to Work"),
-        (f'\U0001F4E7{"" if signals.get("verified_email", False) else "\u2716"}', "Email"),
+        (f'\U0001F4E7{"" if signals.get("verified_email", False) else _cross_mark}', "Email"),
     ]
     for i, (val, label) in enumerate(signal_items):
         with sig_cols[i % 4]:
