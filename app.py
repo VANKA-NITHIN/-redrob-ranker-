@@ -336,11 +336,6 @@ ENTERPRISE_CSS = """
         font-size: clamp(0.75rem, 1.2vw, 0.85rem) !important;
     }
 
-    /* ── Welcome section improvements ── */
-    .welcome-card {
-        padding: clamp(1rem, 3vw, 2rem) !important;
-    }
-
     /* ── Streamlit column stacking on narrow screens ── */
     @media (max-width: 640px) {
         .row-widget.stColumns {
@@ -444,8 +439,8 @@ ENTERPRISE_CSS = """
             font-size: 0.7rem;
             padding: 0.3rem 0.5rem;
         }
-        section[data-testid="stSidebar"] {
-            width: 100% !important;
+        .nav-version {
+            display: none;
         }
         .footer {
             font-size: 0.55rem;
