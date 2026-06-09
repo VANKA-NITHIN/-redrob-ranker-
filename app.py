@@ -1446,6 +1446,13 @@ if "rankings" in st.session_state:
                 )
 
                 min_score = st.slider("Min Score", 0.0, 1.0, 0.7, 0.01)
+                st.markdown('<div style="height:0.5rem;"></div>', unsafe_allow_html=True)
+                page_size = st.selectbox(
+                    "Per page",
+                    [10, 20, 50, 100],
+                    index=1,
+                    help="Number of candidates per page",
+                )
 
         with col_right:
             # ── Build filtered + sorted list ──
@@ -1493,9 +1500,44 @@ if "rankings" in st.session_state:
                     unsafe_allow_html=True,
                 )
             else:
-                for rank, (score, cid, reasoning, penalty, issues) in enumerate(filtered, 1):
+                # Pagination
+                total_pages = max(1, (len(filtered) + page_size - 1) // page_size)
+                page_key = "rankings_page"
+                if page_key not in st.session_state:
+                    st.session_state[page_key] = 1
+                current_page = st.session_state[page_key]
+                if current_page > total_pages:
+                    current_page = total_pages
+                    st.session_state[page_key] = total_pages
+
+                start_idx = (current_page - 1) * page_size
+                end_idx = start_idx + page_size
+                page_items = filtered[start_idx:end_idx]
+                global_start_rank = start_idx + 1
+
+                for offset, (score, cid, reasoning, penalty, issues) in enumerate(page_items):
+                    rank = global_start_rank + offset
                     card = _render_rank_card(rank, score, cid, reasoning, penalty, issues, large_style=False)
                     st.markdown(card, unsafe_allow_html=True)
+
+                # Page navigation
+                if total_pages > 1:
+                    cols = st.columns([1, 2, 1])
+                    with cols[0]:
+                        if st.button("\u25C0 Prev", key="page_prev", disabled=(current_page <= 1), use_container_width=True):
+                            st.session_state[page_key] = max(1, current_page - 1)
+                            st.rerun()
+                    with cols[1]:
+                        st.markdown(
+                            f'<div style="text-align:center;color:var(--text-muted);font-size:0.82rem;padding:0.3rem 0;">'
+                            f'Page {current_page} of {total_pages} &nbsp;({len(filtered)} total)'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+                    with cols[2]:
+                        if st.button("Next \u25B6", key="page_next", disabled=(current_page >= total_pages), use_container_width=True):
+                            st.session_state[page_key] = min(total_pages, current_page + 1)
+                            st.rerun()
 
         # ── Candidate Profile Viewer ──
         st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
