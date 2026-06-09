@@ -1468,6 +1468,8 @@ if "rankings" in st.session_state:
     with tab2:
         if "bookmarks" not in st.session_state:
             st.session_state["bookmarks"] = []
+        if "notes" not in st.session_state:
+            st.session_state["notes"] = {}
         col_left, col_right = st.columns([1, 3])
         with col_left:
             # Hamburger menu popover wrapping all filter/sort controls
@@ -1572,7 +1574,11 @@ if "rankings" in st.session_state:
                     with bm_cols[0]:
                         st.markdown(card, unsafe_allow_html=True)
                     with bm_cols[1]:
+                        notes = st.session_state["notes"]
                         is_bm = cid in bookmarks
+                        has_note = cid in notes and notes[cid].strip()
+                        note_indicator = f'<div style="font-size:0.7rem;text-align:center;color:var(--warning);margin-bottom:0.15rem;" title="Has notes">\U0001F4DD</div>' if has_note else ""
+                        st.markdown(note_indicator, unsafe_allow_html=True)
                         btn_label = "⭐" if is_bm else "☆"
                         btn_help = "Remove bookmark" if is_bm else "Bookmark this candidate"
                         if st.button(btn_label, key=f"bm_{cid}", help=btn_help):
@@ -1657,6 +1663,35 @@ if "rankings" in st.session_state:
                     unsafe_allow_html=True,
                 )
                 _render_candidate_profile(candidate)
+
+                # ── Notes ──
+                st.markdown(
+                    '<div style="margin-top:0.8rem;border-top:1px solid var(--border-light);padding-top:0.6rem;">'
+                    '<div style="color:var(--text-secondary);font-size:0.85rem;font-weight:600;margin-bottom:0.3rem;">'
+                    '\U0001F4DD Notes</div>',
+                    unsafe_allow_html=True,
+                )
+                notes = st.session_state["notes"]
+                current_note = notes.get(selected_cid, "")
+                note_text = st.text_area(
+                    "Candidate notes",
+                    value=current_note,
+                    placeholder="Add your notes about this candidate...",
+                    label_visibility="collapsed",
+                    key=f"note_input_{selected_cid}",
+                )
+                note_cols = st.columns([1, 1])
+                with note_cols[0]:
+                    if st.button("\U0001F4BE Save Note", key=f"save_note_{selected_cid}", type="primary", use_container_width=True):
+                        st.session_state["notes"][selected_cid] = note_text
+                        st.toast("\u2705 Note saved", icon="\U0001F4DD")
+                        st.rerun()
+                with note_cols[1]:
+                    if current_note and st.button("\U0001F5D1 Clear Note", key=f"clear_note_{selected_cid}", type="secondary", use_container_width=True):
+                        st.session_state["notes"][selected_cid] = ""
+                        st.toast("Note cleared", icon="\U0001F5D1")
+                        st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
                 # Close button
                 if st.button("\u2716 Close Profile", key="close_candidate_profile", type="secondary"):
