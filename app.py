@@ -1524,6 +1524,7 @@ if "rankings" in st.session_state:
                 )
 
                 min_score = st.slider("Min Score", 0.0, 1.0, 0.7, 0.01)
+                show_bookmarked_only = st.checkbox("\U0001F4CC Bookmarked only", value=False, help="Show only bookmarked candidates")
                 st.markdown('<div style="height:0.5rem;"></div>', unsafe_allow_html=True)
                 page_size = st.selectbox(
                     "Per page",
@@ -1547,6 +1548,8 @@ if "rankings" in st.session_state:
                 if badge_filter == "Suspicious" and not (0.3 <= penalty < 0.8):
                     continue
                 if badge_filter == "Honeypot" and penalty >= 0.3:
+                    continue
+                if show_bookmarked_only and cid not in bookmarks:
                     continue
                 filtered.append((score, cid, reasoning, penalty, issues))
 
