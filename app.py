@@ -411,10 +411,6 @@ ENTERPRISE_CSS = """
         .nav-subtitle {
             display: none;
         }
-        .nav-version {
-            font-size: 0.55rem;
-            padding: 0.15rem 0.4rem;
-        }
         .metric-grid {
             grid-template-columns: repeat(2, 1fr);
             gap: 0.35rem;
