@@ -721,8 +721,6 @@ def generate_reasoning(candidate: dict, score: float, hon_penalty: float, hon_is
     title = profile.get("current_title", "")
     headline = profile.get("headline", "")
     years_exp = profile.get("years_of_experience", 0) or 0
-    skills = candidate.get("skills", [])
-    skill_names = [s["name"] for s in skills]
     signals = candidate.get("redrob_signals", {})
     history = candidate.get("career_history", [])
     location = profile.get("location", "")
