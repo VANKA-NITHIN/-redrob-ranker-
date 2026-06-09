@@ -534,6 +534,32 @@ ENTERPRISE_CSS = f"""
         .footer {{ font-size: 0.55rem; padding: 0.5rem 0; }}
     }}
 
+    /* ── Mobile hamburger filter toggle ── */
+    @media (min-width: 769px) {{
+        /* Desktop: hide the hamburger button */
+        button[title="Toggle filters"] {{ display: none !important; }}
+    }}
+    @media (max-width: 768px) {{
+        /* Mobile: hamburger visible, filters toggle via session state */
+        button[title="Toggle filters"] {{
+            display: inline-flex !important;
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 8px;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            width: 100%;
+            justify-content: center;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.5rem;
+        }}
+        button[title="Toggle filters"]:hover {{
+            border-color: var(--accent-blue);
+        }}
+    }}
+
     /* ── Large screens: > 1440px ── */
     @media (min-width: 1441px) {{
         .main > .block-container {{
@@ -1117,8 +1143,14 @@ if "rankings" in st.session_state:
     with tab2:
         col_left, col_right = st.columns([1, 3])
         with col_left:
-            # Hamburger menu popover wrapping all filter/sort controls
-            with st.popover("\u2630 Filter & Sort", use_container_width=True):
+            # Mobile hamburger toggle (hidden on desktop via CSS)
+            if st.button("\u2630 Filters", key="mobile_filter_toggle", use_container_width=True, help="Toggle filters"):
+                st.session_state["mf_visible"] = not st.session_state.get("mf_visible", True)
+                st.rerun()
+
+            _show_filters = st.session_state.get("mf_visible", True)
+
+            if _show_filters:
                 search_term = st.text_input(
                     "\U0001F50D Search",
                     placeholder="ID or keyword...",
@@ -1140,6 +1172,12 @@ if "rankings" in st.session_state:
                 )
 
                 min_score = st.slider("Min Score", 0.0, 1.0, 0.7, 0.01)
+            else:
+                # Defaults when filters are collapsed on mobile
+                search_term = ""
+                badge_filter = "All"
+                sort_by = "Score (High\u2192Low)"
+                min_score = 0.0
 
         with col_right:
             # ── Build filtered + sorted list ──
