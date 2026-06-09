@@ -970,7 +970,31 @@ def badge_html(penalty):
     return '<span class="badge badge-clean">\u2713 VERIFIED</span>'
 
 
-def _render_rank_card(rank, score, cid, reasoning, penalty, issues, large_style=False):
+def _highlight_text(text, term):
+    """Highlight occurrences of term in text with a styled <mark> tag.
+    Both text and term should already be HTML-escaped.
+    """
+    if not term or not term.strip():
+        return text
+    safe_term = _html_escape(term.strip())
+    # Case-insensitive highlight using a simple approach
+    lower_text = text.lower()
+    lower_term = safe_term.lower()
+    result = []
+    start = 0
+    while True:
+        idx = lower_text.find(lower_term, start)
+        if idx == -1:
+            result.append(text[start:])
+            break
+        result.append(text[start:idx])
+        result.append(f'<mark style="background:rgba(59,130,246,0.25);color:var(--accent-blue-light);'
+                       f'border-radius:3px;padding:0 2px;">{text[idx:idx+len(safe_term)]}</mark>')
+        start = idx + len(safe_term)
+    return "".join(result)
+
+
+def _render_rank_card(rank, score, cid, reasoning, penalty, issues, large_style=False, search_term=None):
     """Build a rank card HTML string. Handles HTML escaping internally."""
     pct = min(score * 100, 100)
     bc = P["danger"] if penalty < 0.3 else (P["warning"] if penalty < 0.8 else P["success"])
@@ -980,6 +1004,11 @@ def _render_rank_card(rank, score, cid, reasoning, penalty, issues, large_style=
 
     safe_cid = cid.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     safe_reasoning = reasoning[:rl].replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    # Apply search term highlighting
+    if search_term and search_term.strip():
+        safe_cid = _highlight_text(safe_cid, search_term)
+        safe_reasoning = _highlight_text(safe_reasoning, search_term)
 
     issues_html = ""
     if issues:
@@ -1568,7 +1597,7 @@ if "rankings" in st.session_state:
 
                 for offset, (score, cid, reasoning, penalty, issues) in enumerate(page_items):
                     rank = global_start_rank + offset
-                    card = _render_rank_card(rank, score, cid, reasoning, penalty, issues, large_style=False)
+                    card = _render_rank_card(rank, score, cid, reasoning, penalty, issues, large_style=False, search_term=search_term)
                     # Bookmark toggle — star sits to the right of each rank card
                     bm_cols = st.columns([0.85, 0.15])
                     with bm_cols[0]:
