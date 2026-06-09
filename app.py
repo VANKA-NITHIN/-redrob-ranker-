@@ -1307,6 +1307,50 @@ with st.sidebar:
             key="export_json",
         )
 
+        # ── Export Bookmarked Candidates ──
+        sidebar_bookmarks = st.session_state.get("bookmarks", [])
+        if sidebar_bookmarks:
+            bm_export_rows = []
+            for bm_rank, (bm_score, bm_cid, bm_reasoning, bm_penalty, bm_issues) in enumerate(sidebar_rankings, 1):
+                if bm_cid in sidebar_bookmarks:
+                    bm_badge = "HONEYPOT" if bm_penalty < 0.3 else ("SUSPICIOUS" if bm_penalty < 0.8 else "VERIFIED")
+                    bm_export_rows.append({
+                        "Rank": bm_rank,
+                        "Candidate ID": bm_cid,
+                        "Score": round(bm_score, 4),
+                        "Penalty": round(bm_penalty, 4),
+                        "Badge": bm_badge,
+                        "Reasoning": bm_reasoning,
+                        "Issues": "; ".join(bm_issues) if bm_issues else "",
+                    })
+
+            if bm_export_rows:
+                st.markdown('<div style="color:var(--text-muted);font-size:0.72rem;margin:0.3rem 0;">'
+                            f'\U0001F4CC {len(bm_export_rows)} bookmarked</div>', unsafe_allow_html=True)
+
+                df_bm = pd.DataFrame(bm_export_rows)
+                bm_csv = io.StringIO()
+                df_bm.to_csv(bm_csv, index=False)
+
+                st.download_button(
+                    label="\U0001F4C4 Download Bookmarks CSV",
+                    data=bm_csv.getvalue(),
+                    file_name=f"bookmarks_{time.strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    key="export_bm_csv",
+                )
+
+                bm_json = json.dumps(bm_export_rows, indent=2, ensure_ascii=False)
+                st.download_button(
+                    label="\U0001F4CB Download Bookmarks JSON",
+                    data=bm_json,
+                    file_name=f"bookmarks_{time.strftime('%Y%m%d_%H%M%S')}.json",
+                    mime="application/json",
+                    use_container_width=True,
+                    key="export_bm_json",
+                )
+
 # ── Main Content ────────────────────────────────────────────────────────────
 
 if "rankings" in st.session_state:
