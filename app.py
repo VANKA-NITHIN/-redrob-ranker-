@@ -925,28 +925,32 @@ if "rankings" in st.session_state:
             unsafe_allow_html=True,
         )
 
-        for rank, (score, cid, reasoning, penalty, issues) in enumerate(rankings[:5], 1):
+        def _render_rank_card(rank, score, cid, reasoning, penalty, issues, large_style=False):
+            """Build a rank card HTML string."""
             pct = min(score * 100, 100)
-            bar_color = P["danger"] if penalty < 0.3 else (P["warning"] if penalty < 0.8 else P["success"])
+            bc = P["danger"] if penalty < 0.3 else (P["warning"] if penalty < 0.8 else P["success"])
+            fs = "1.1rem" if large_style else "0.95rem"
+            rl = 120 if large_style else 150
+            return (
+                f'<div class="rank-card">'
+                f'<div style="display:flex;align-items:center;gap:0.8rem;">'
+                f'<div class="rank-number">#{rank}</div>'
+                f'<div style="flex:1;">'
+                f'<div class="candidate-name">{cid}</div>'
+                f'<div class="candidate-meta">{reasoning[:rl]}</div>'
+                f'</div>'
+                f'<div style="text-align:right;">'
+                f'<div class="score-text" style="color:{bc};font-size:{fs};">{score:.4f}</div>'
+                f'{badge_html(penalty)}'
+                f'</div>'
+                f'</div>'
+                f'<div class="score-bar"><div class="score-bar-fill" style="width:{pct:.1f}%;background:{bc};"></div></div>'
+                f'</div>'
+            )
 
-            st.markdown(f"""
-            <div class="rank-card">
-                <div style="display:flex;align-items:center;gap:0.8rem;">
-                    <div class="rank-number">#{rank}</div>
-                    <div style="flex:1;">
-                        <div class="candidate-name">{cid}</div>
-                        <div class="candidate-meta">{reasoning[:120]}</div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div class="score-text" style="color:{bar_color};font-size:1.1rem;">{score:.4f}</div>
-                        {badge_html(penalty)}
-                    </div>
-                </div>
-                <div class="score-bar">
-                    <div class="score-bar-fill" style="width:{pct:.1f}%;background:{bar_color};"></div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+        for rank, (score, cid, reasoning, penalty, issues) in enumerate(rankings[:5], 1):
+            card = _render_rank_card(rank, score, cid, reasoning, penalty, issues, large_style=True)
+            st.markdown(card, unsafe_allow_html=True)
 
     # ── Tab 2: Full Rankings ──
     with tab2:
@@ -968,31 +972,32 @@ if "rankings" in st.session_state:
                     continue
 
                 pct = min(score * 100, 100)
-                bar_color = P["danger"] if penalty < 0.3 else (P["warning"] if penalty < 0.8 else P["success"])
+                bc = P["danger"] if penalty < 0.3 else (P["warning"] if penalty < 0.8 else P["success"])
+                delay = (rank % 20) * 0.02
 
                 issues_html = ""
                 if issues:
-                    issues_html = f'<div style="color:{P["danger"]};font-size:0.75rem;margin-top:0.2rem;">\u26A0 {"; ".join(issues[:2])}</div>'
+                    safe_issues = "; ".join(issues[:2]).replace("<", "&lt;").replace(">", "&gt;")
+                    issues_html = f'<div style="color:{P["danger"]};font-size:0.75rem;margin-top:0.2rem;">\u26A0 {safe_issues}</div>'
 
-                st.markdown(f"""
-                <div class="rank-card" style="animation-delay:{(rank % 20) * 0.02}s">
-                    <div style="display:flex;align-items:center;gap:0.8rem;">
-                        <div class="rank-number" style="min-width:2rem;">#{rank}</div>
-                        <div style="flex:1;">
-                            <div class="candidate-name">{cid}</div>
-                            <div class="candidate-meta">{reasoning[:150]}</div>
-                            {issues_html}
-                        </div>
-                        <div style="text-align:right;">
-                            <div class="score-text" style="color:{bar_color};font-size:0.95rem;">{score:.4f}</div>
-                            {badge_html(penalty)}
-                        </div>
-                    </div>
-                    <div class="score-bar">
-                        <div class="score-bar-fill" style="width:{pct:.1f}%;background:{bar_color};"></div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                card = (
+                    f'<div class="rank-card" style="animation-delay:{delay}s">'
+                    f'<div style="display:flex;align-items:center;gap:0.8rem;">'
+                    f'<div class="rank-number" style="min-width:2rem;">#{rank}</div>'
+                    f'<div style="flex:1;">'
+                    f'<div class="candidate-name">{cid}</div>'
+                    f'<div class="candidate-meta">{reasoning[:150]}</div>'
+                    f'{issues_html}'
+                    f'</div>'
+                    f'<div style="text-align:right;">'
+                    f'<div class="score-text" style="color:{bc};font-size:0.95rem;">{score:.4f}</div>'
+                    f'{badge_html(penalty)}'
+                    f'</div>'
+                    f'</div>'
+                    f'<div class="score-bar"><div class="score-bar-fill" style="width:{pct:.1f}%;background:{bc};"></div></div>'
+                    f'</div>'
+                )
+                st.markdown(card, unsafe_allow_html=True)
 
     # ── Tab 3: Insights ──
     with tab3:
