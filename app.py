@@ -1422,6 +1422,8 @@ if "rankings" in st.session_state:
 
     # ── Tab 2: Full Rankings ──
     with tab2:
+        if "bookmarks" not in st.session_state:
+            st.session_state["bookmarks"] = []
         col_left, col_right = st.columns([1, 3])
         with col_left:
             # Hamburger menu popover wrapping all filter/sort controls
@@ -1516,10 +1518,27 @@ if "rankings" in st.session_state:
                 page_items = filtered[start_idx:end_idx]
                 global_start_rank = start_idx + 1
 
+                bookmarks = st.session_state["bookmarks"]
+
                 for offset, (score, cid, reasoning, penalty, issues) in enumerate(page_items):
                     rank = global_start_rank + offset
                     card = _render_rank_card(rank, score, cid, reasoning, penalty, issues, large_style=False)
-                    st.markdown(card, unsafe_allow_html=True)
+                    # Bookmark toggle — star sits to the right of each rank card
+                    bm_cols = st.columns([1, '50px'])
+                    with bm_cols[0]:
+                        st.markdown(card, unsafe_allow_html=True)
+                    with bm_cols[1]:
+                        is_bm = cid in bookmarks
+                        btn_label = "⭐" if is_bm else "☆"
+                        btn_help = "Remove bookmark" if is_bm else "Bookmark this candidate"
+                        if st.button(btn_label, key=f"bm_{cid}", help=btn_help):
+                            new_bookmarks = list(bookmarks)
+                            if is_bm:
+                                new_bookmarks.remove(cid)
+                            else:
+                                new_bookmarks.append(cid)
+                            st.session_state["bookmarks"] = new_bookmarks
+                            st.rerun()
 
                 # Page navigation
                 if total_pages > 1:
@@ -1539,6 +1558,32 @@ if "rankings" in st.session_state:
                         if st.button("Next \u25B6", key="page_next", disabled=(current_page >= total_pages), use_container_width=True):
                             st.session_state[page_key] = min(total_pages, current_page + 1)
                             st.rerun()
+
+        # ── Bookmarked Candidates Quick View ──
+        bookmarks = st.session_state.get("bookmarks", [])
+        if bookmarks:
+            st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div style="color:var(--text-secondary);font-size:0.85rem;font-weight:600;margin-bottom:0.4rem;">'
+                '\U0001F4CC Bookmarked Candidates</div>',
+                unsafe_allow_html=True,
+            )
+            for bm_cid in bookmarks:
+                # Find the rank and score for this bookmarked candidate
+                bm_info = None
+                for bm_rank, (bm_score, bm_cid2, bm_reasoning, bm_penalty, bm_issues) in enumerate(rankings, 1):
+                    if bm_cid2 == bm_cid:
+                        bm_info = (bm_rank, bm_score, bm_cid2, bm_reasoning, bm_penalty, bm_issues)
+                        break
+                if bm_info:
+                    rank, score, cid, reasoning, penalty, issues = bm_info
+                    card = _render_rank_card(rank, score, cid, reasoning, penalty, issues, large_style=False)
+                    st.markdown(card, unsafe_allow_html=True)
+
+            if st.button("\u2716 Clear All Bookmarks", key="clear_bookmarks", type="secondary", use_container_width=True):
+                st.session_state["bookmarks"] = []
+                st.rerun()
+            st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
         # ── Candidate Profile Viewer ──
         st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
