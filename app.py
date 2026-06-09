@@ -704,15 +704,15 @@ ENTERPRISE_CSS = f"""
         border-radius: 12px !important;
     }}
 
-    /* ── Column stacking on narrow screens ── */
+    /* ── Column wrapping on narrow screens ── */
     @media (max-width: 640px) {{
         .row-widget.stColumns {{
-            flex-direction: column !important;
+            flex-wrap: wrap !important;
+            gap: 0.25rem !important;
         }}
         .row-widget.stColumns > div {{
-            width: 100% !important;
-            flex: 1 1 100% !important;
             min-width: 0 !important;
+            flex: 1 1 auto !important;
         }}
     }}
 
