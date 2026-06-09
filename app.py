@@ -25,7 +25,7 @@ st.set_page_config(
 
 # ── Theme ───────────────────────────────────────────────────────────────────
 
-THEME = st.session_state.get("theme", "dark")
+THEME = st.session_state.get("theme", "light")
 
 # Plotly colors — resolved here because CSS variables don't work in Plotly's SVG output
 if THEME == "dark":
