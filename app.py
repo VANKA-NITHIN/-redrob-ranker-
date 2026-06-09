@@ -1223,6 +1223,66 @@ if "rankings" in st.session_state:
 
                 st.markdown('</div>', unsafe_allow_html=True)
 
+        # ── Compare Candidates ──
+        st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div style="color:var(--text-secondary);font-size:0.9rem;font-weight:600;margin-bottom:0.3rem;">'
+            '\U0001F504 Compare Candidates</div>',
+            unsafe_allow_html=True,
+        )
+
+        compare_cids = st.multiselect(
+            "Select up to 2 candidates to compare:",
+            cid_list,
+            max_selections=2,
+            placeholder="Choose candidates...",
+            label_visibility="collapsed",
+        )
+
+        if len(compare_cids) == 2:
+            c1 = find_candidate_by_cid(compare_cids[0])
+            c2 = find_candidate_by_cid(compare_cids[1])
+            if c1 and c2:
+                st.markdown(
+                    f'<div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.5rem;">'
+                    f'<span style="color:var(--accent-blue);font-weight:600;font-size:0.85rem;">'
+                    f'Comparing: {compare_cids[0]} vs {compare_cids[1]}</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+                comp_col1, comp_col2 = st.columns(2)
+
+                with comp_col1:
+                    st.markdown(
+                        f'<div style="background:var(--bg-card-alt);border:1px solid var(--border-card);'
+                        f'border-radius:10px;padding:0.8rem;height:100%;">'
+                        f'<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;'
+                        f'padding-bottom:0.5rem;border-bottom:1px solid var(--border-color);">'
+                        f'<span class="badge badge-clean">#{compare_cids[0]}</span>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                    _render_candidate_profile(c1)
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+                with comp_col2:
+                    st.markdown(
+                        f'<div style="background:var(--bg-card-alt);border:1px solid var(--border-card);'
+                        f'border-radius:10px;padding:0.8rem;height:100%;">'
+                        f'<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;'
+                        f'padding-bottom:0.5rem;border-bottom:1px solid var(--border-color);">'
+                        f'<span class="badge badge-clean">#{compare_cids[1]}</span>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                    _render_candidate_profile(c2)
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+                # Clear comparison button
+                if st.button("\u2716 Clear Comparison", key="clear_comparison", type="secondary"):
+                    st.rerun()
+
     # ── Tab 3: Insights ──
     with tab3:
         col1, col2 = st.columns(2)
