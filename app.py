@@ -1,12 +1,17 @@
 """
 Redrob Hackathon — Intelligent Candidate Ranking
-Polished Streamlit UI with custom CSS, charts, animations, and modern design.
+Enterprise-grade UI with Excel/CSV/JSON input, tabbed analytics, and professional design.
 """
 import json
 import os
 import sys
 import time
+from io import StringIO
 
+import pandas as pd
+from collections import Counter
+
+import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
@@ -14,195 +19,275 @@ sys.path.insert(0, os.path.dirname(__file__))
 from ranker import process_candidates
 
 st.set_page_config(
-    page_title="Redrob Candidate Ranker",
+    page_title="Redrob Candidate Ranker - Enterprise",
     page_icon="\U0001F3C6",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ── Custom CSS ──────────────────────────────────────────────────────────────
+# ── Enterprise Theme ─────────────────────────────────────────────────────────
 
-CUSTOM_CSS = """
+ENTERPRISE_CSS = """
 <style>
-    /* ── Base theme ── */
-    .stApp {
-        background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+    /* ── Base ── */
+    .stApp { background: #0a0e17; }
+    .stApp > header { background: transparent !important; }
+    .stApp > header [data-testid="stDecoration"] { display: none; }
+
+    /* ── Typography ── */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    html, body, [class*="css"] { font-family: 'Inter', -apple-system, sans-serif; }
+
+    /* ── Top Nav Bar ── */
+    .nav-bar {
+        background: linear-gradient(135deg, #0f1629 0%, #1a1f3a 100%);
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        padding: 0.8rem 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: -1rem -1rem 1rem -1rem;
+    }
+    .nav-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .nav-logo {
+        width: 36px; height: 36px;
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.2rem;
+    }
+    .nav-title {
+        font-weight: 700;
+        font-size: 1.2rem;
+        color: #f1f5f9;
+        letter-spacing: -0.3px;
+    }
+    .nav-subtitle {
+        font-size: 0.8rem;
+        color: #64748b;
+        margin-top: -0.1rem;
+    }
+    .nav-version {
+        background: rgba(59,130,246,0.15);
+        color: #60a5fa;
+        padding: 0.2rem 0.6rem;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 600;
     }
 
-    /* ── Main title ── */
-    .main-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 2.5rem;
-        font-weight: 800;
-        margin-bottom: 0.2rem;
-        letter-spacing: -0.5px;
-    }
-    .main-subtitle {
-        color: #a0aec0;
-        font-size: 1rem;
+    /* ── Enterprise Metric Cards ── */
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 0.75rem;
         margin-bottom: 1.5rem;
     }
-
-    /* ── Metric cards ── */
     .metric-card {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: linear-gradient(135deg, rgba(30,41,59,0.8), rgba(15,23,42,0.8));
+        border: 1px solid rgba(255,255,255,0.06);
         border-radius: 12px;
-        padding: 1rem;
-        text-align: center;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 1.2rem 1rem;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
     }
     .metric-card:hover {
-        transform: translateY(-3px);
-        border-color: rgba(102, 126, 234, 0.4);
-        box-shadow: 0 8px 30px rgba(102, 126, 234, 0.15);
+        border-color: rgba(59,130,246,0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(59,130,246,0.08);
+    }
+    .metric-card .accent-line {
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 3px;
+        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
     }
     .metric-value {
         font-size: 1.8rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        color: #f1f5f9;
+        letter-spacing: -0.5px;
+        line-height: 1.2;
     }
     .metric-label {
-        color: #a0aec0;
-        font-size: 0.85rem;
+        font-size: 0.78rem;
+        color: #64748b;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.8px;
+        margin-top: 0.25rem;
+    }
+    .metric-trend {
+        font-size: 0.7rem;
         margin-top: 0.3rem;
     }
+    .metric-trend.up { color: #34d399; }
+    .metric-trend.down { color: #f87171; }
 
-    /* ── Candidate cards ── */
-    .candidate-card {
-        background: rgba(255, 255, 255, 0.04);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: 14px;
-        padding: 1.2rem 1.5rem;
-        margin-bottom: 0.8rem;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        animation: slideIn 0.4s ease-out;
+    /* ── Enterprise Data Cards ── */
+    .rank-card {
+        background: linear-gradient(135deg, rgba(30,41,59,0.6), rgba(15,23,42,0.6));
+        border: 1px solid rgba(255,255,255,0.05);
+        border-radius: 10px;
+        padding: 1rem 1.2rem;
+        margin-bottom: 0.6rem;
+        transition: all 0.25s ease;
+        animation: slideIn 0.35s ease-out;
     }
-    .candidate-card:hover {
-        border-color: rgba(102, 126, 234, 0.3);
-        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.1);
-        transform: translateX(4px);
-    }
-
-    .candidate-rank {
-        font-size: 1.3rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-
-    .candidate-id {
-        font-weight: 600;
-        color: #e2e8f0;
-    }
-    .candidate-score {
-        font-family: 'SF Mono', 'Fira Code', monospace;
-        font-size: 0.95rem;
+    .rank-card:hover {
+        border-color: rgba(59,130,246,0.2);
+        background: rgba(30,41,59,0.8);
+        transform: translateX(3px);
     }
 
     @keyframes slideIn {
-        from { opacity: 0; transform: translateX(-15px); }
+        from { opacity: 0; transform: translateX(-10px); }
         to   { opacity: 1; transform: translateX(0); }
     }
 
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(8px); }
-        to   { opacity: 1; transform: translateY(0); }
+    .rank-number {
+        font-weight: 800;
+        font-size: 1.2rem;
+        color: #3b82f6;
+        min-width: 2.5rem;
+    }
+    .candidate-name {
+        font-weight: 600;
+        color: #e2e8f0;
+        font-size: 0.95rem;
+    }
+    .candidate-meta {
+        color: #64748b;
+        font-size: 0.8rem;
+    }
+    .score-text {
+        font-family: 'JetBrains Mono', 'SF Mono', monospace;
+        font-weight: 600;
     }
 
     /* ── Badges ── */
-    .badge-clean {
-        display: inline-block;
-        background: rgba(72, 187, 120, 0.15);
-        color: #48bb78;
-        padding: 0.15rem 0.6rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.15rem 0.55rem;
+        border-radius: 6px;
+        font-size: 0.7rem;
         font-weight: 600;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
     }
-    .badge-suspicious {
-        display: inline-block;
-        background: rgba(237, 137, 54, 0.15);
-        color: #ed8936;
-        padding: 0.15rem 0.6rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-    }
-    .badge-honeypot {
-        display: inline-block;
-        background: rgba(245, 101, 101, 0.15);
-        color: #f56565;
-        padding: 0.15rem 0.6rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-        animation: pulse 2s infinite;
-    }
+    .badge-clean { background: rgba(52,211,153,0.12); color: #34d399; }
+    .badge-suspicious { background: rgba(251,191,36,0.12); color: #fbbf24; }
+    .badge-honeypot { background: rgba(248,113,113,0.12); color: #f87171; animation: pulse 2s infinite; }
+
     @keyframes pulse {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.7; }
     }
 
-    .issues-text {
-        color: #f56565;
-        font-size: 0.8rem;
-        font-style: italic;
+    /* ── Progress bar ── */
+    .score-bar {
+        height: 3px;
+        border-radius: 3px;
+        background: rgba(255,255,255,0.06);
+        margin: 0.4rem 0 0.3rem 0;
+        overflow: hidden;
+    }
+    .score-bar-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 1s ease;
     }
 
-    /* ── Progress bar glow ── */
-    .stProgress > div > div > div > div {
-        background: linear-gradient(90deg, #667eea, #764ba2) !important;
+    /* ── Tab styling ── */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.5rem;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
     }
-
-    /* ── Sidebar tweaks ── */
-    .sidebar-section-header {
-        color: #667eea;
-        font-weight: 700;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 1.5px;
-        margin-bottom: 0.8rem;
-    }
-
-    /* ── Divider ── */
-    .custom-divider {
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.3), transparent);
-        margin: 1.5rem 0;
-    }
-
-    /* ── Source label ── */
-    .source-label {
-        color: #718096;
+    .stTabs [data-baseweb="tab"] {
+        background: transparent !important;
+        color: #64748b !important;
+        font-weight: 500;
         font-size: 0.85rem;
-        margin-bottom: 1rem;
+        padding: 0.5rem 1rem;
+        border-radius: 8px 8px 0 0;
+        transition: all 0.2s;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #e2e8f0 !important;
+        background: rgba(255,255,255,0.03) !important;
+    }
+    .stTabs [aria-selected="true"] {
+        color: #60a5fa !important;
+        border-bottom: 2px solid #3b82f6 !important;
     }
 
-    /* ── Chart container ── */
-    .chart-container {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: 14px;
-        padding: 1rem;
-        margin-bottom: 1rem;
+    /* ── Sidebar ── */
+    section[data-testid="stSidebar"] {
+        background: #0f1629;
+        border-right: 1px solid rgba(255,255,255,0.05);
+    }
+    section[data-testid="stSidebar"] .stButton button {
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 0.85rem;
+    }
+    section[data-testid="stSidebar"] .stButton button[kind="primary"] {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+        border: none;
+    }
+    section[data-testid="stSidebar"] .stButton button[kind="secondary"] {
+        background: rgba(255,255,255,0.05);
+        color: #94a3b8;
+        border: 1px solid rgba(255,255,255,0.08);
+    }
+    .sidebar-title {
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        margin-bottom: 0.75rem;
+    }
+
+    /* ── Dividers ── */
+    .divider {
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(59,130,246,0.15), transparent);
+        margin: 1.2rem 0;
+    }
+
+    /* ── Footer ── */
+    .footer {
+        margin-top: 2rem;
+        padding: 1rem 0;
+        border-top: 1px solid rgba(255,255,255,0.04);
+        text-align: center;
+        color: #334155;
+        font-size: 0.75rem;
     }
 </style>
 """
 
-st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+st.markdown(ENTERPRISE_CSS, unsafe_allow_html=True)
+
+# ── Nav bar ─────────────────────────────────────────────────────────────────
+
+st.markdown("""
+<div class="nav-bar">
+    <div class="nav-brand">
+        <div class="nav-logo">\U0001F3C6</div>
+        <div>
+            <div class="nav-title">Redrob Candidate Ranker</div>
+            <div class="nav-subtitle">Intelligent Candidate Discovery &bull; Enterprise Edition</div>
+        </div>
+    </div>
+    <div class="nav-version">v2.0 &bull; 11 honeypot checks</div>
+</div>
+""", unsafe_allow_html=True)
 
 SAMPLE_PATH = os.path.join(os.path.dirname(__file__), "data", "sample_candidates.json")
 
@@ -211,7 +296,7 @@ SAMPLE_PATH = os.path.join(os.path.dirname(__file__), "data", "sample_candidates
 
 def run_ranker(candidates, source_label):
     if not candidates:
-        st.error("No candidates found in the provided data.")
+        st.error("No candidates found.")
         return
     start = time.time()
     rankings = process_candidates(candidates)
@@ -221,6 +306,8 @@ def run_ranker(candidates, source_label):
     st.session_state["elapsed"] = elapsed
     st.session_state["total"] = len(candidates)
     st.session_state["source"] = source_label
+    st.session_state["active_tab"] = "Dashboard"
+    st.toast(f"\u2705 Ranked {len(candidates)} candidates in {elapsed:.2f}s", icon="\U0001F3C6")
 
 
 def parse_json_input(raw):
@@ -236,398 +323,562 @@ def parse_json_input(raw):
     raise ValueError("JSON must be an array of candidate objects")
 
 
-def make_metric(value, label, key=None):
+def parse_tabular_data(df):
+    """Convert a flat DataFrame to the nested candidate schema."""
+    candidates = []
+    for _, row in df.iterrows():
+        r = row.fillna("").to_dict()
+        c = {
+            "candidate_id": str(r.get("candidate_id", r.get("id", f"CAND_{len(candidates)+1:07d}"))),
+            "profile": {
+                "anonymized_name": str(r.get("name", r.get("anonymized_name", "Unknown"))),
+                "headline": str(r.get("headline", "")),
+                "summary": str(r.get("summary", "")),
+                "location": str(r.get("location", "")),
+                "country": str(r.get("country", "India")),
+                "years_of_experience": float(r.get("years_of_experience", r.get("experience", 0)) or 0),
+                "current_title": str(r.get("current_title", r.get("title", "Engineer"))),
+                "current_company": str(r.get("current_company", r.get("company", ""))),
+                "current_company_size": str(r.get("current_company_size", "501-1000")),
+                "current_industry": str(r.get("current_industry", r.get("industry", "Technology"))),
+            },
+            "career_history": [{
+                "company": str(r.get("company", r.get("current_company", ""))),
+                "title": str(r.get("title", r.get("current_title", "Engineer"))),
+                "start_date": str(r.get("start_date", "2020-01-01")),
+                "end_date": str(r.get("end_date", "")),
+                "duration_months": int(float(r.get("duration_months", 0) or 0)),
+                "is_current": bool(r.get("is_current", True)),
+                "industry": str(r.get("industry", "Technology")),
+                "company_size": str(r.get("company_size", "501-1000")),
+                "description": str(r.get("description", r.get("summary", ""))),
+            }],
+            "education": [{
+                "institution": str(r.get("institution", "University")),
+                "degree": str(r.get("degree", "B.Tech")),
+                "field_of_study": str(r.get("field_of_study", "Computer Science")),
+                "start_year": int(float(r.get("start_year", 2015) or 2015)),
+                "end_year": int(float(r.get("end_year", 2019) or 2019)),
+                "grade": str(r.get("grade", "")),
+                "tier": str(r.get("tier", "tier_3")),
+            }],
+            "skills": [],
+            "redrob_signals": {
+                "profile_completeness_score": float(r.get("profile_completeness", 50)),
+                "signup_date": str(r.get("signup_date", "2020-01-01")),
+                "last_active_date": str(r.get("last_active_date", "2025-01-01")),
+                "open_to_work_flag": bool(r.get("open_to_work", True)),
+                "profile_views_received_30d": int(float(r.get("profile_views", 0) or 0)),
+                "applications_submitted_30d": int(float(r.get("applications", 0) or 0)),
+                "recruiter_response_rate": float(r.get("response_rate", 0.5) or 0.5),
+                "avg_response_time_hours": float(r.get("avg_response_time", 48) or 48),
+                "skill_assessment_scores": {},
+                "connection_count": int(float(r.get("connections", 100) or 100)),
+                "endorsements_received": int(float(r.get("endorsements", 10) or 10)),
+                "notice_period_days": int(float(r.get("notice_period", 60) or 60)),
+                "expected_salary_range_inr_lpa": {
+                    "min": float(r.get("salary_min", r.get("expected_salary_min", 10)) or 10),
+                    "max": float(r.get("salary_max", r.get("expected_salary_max", 30)) or 30),
+                },
+                "preferred_work_mode": str(r.get("work_mode", "remote")),
+                "willing_to_relocate": bool(r.get("willing_relocate", True)),
+                "github_activity_score": float(r.get("github_score", 0) or 0),
+                "search_appearance_30d": int(float(r.get("search_appearances", 50) or 50)),
+                "saved_by_recruiters_30d": int(float(r.get("saved_by_recruiters", 5) or 5)),
+                "interview_completion_rate": float(r.get("interview_rate", 0.7) or 0.7),
+                "offer_acceptance_rate": float(r.get("offer_rate", 0.5) or 0.5),
+                "verified_email": bool(r.get("verified_email", True)),
+                "verified_phone": bool(r.get("verified_phone", True)),
+                "linkedin_connected": bool(r.get("linkedin", True)),
+            },
+        }
+
+        # Parse skills from a comma-separated string if provided
+        skills_raw = r.get("skills", "")
+        if isinstance(skills_raw, str) and skills_raw.strip():
+            for sk in skills_raw.split(","):
+                sk = sk.strip()
+                if sk:
+                    c["skills"].append({"name": sk, "proficiency": "intermediate", "endorsements": 5})
+
+        candidates.append(c)
+    return candidates
+
+
+def make_metric_card(value, label, accent_color="#3b82f6", trend=None):
+    trend_html = ""
+    if trend:
+        cls = "up" if trend > 0 else "down"
+        arrow = "\u25B2" if trend > 0 else "\u25BC"
+        trend_html = f'<div class="metric-trend {cls}">{arrow} {abs(trend)}%</div>'
     return f"""
-    <div class="metric-card" {'id="' + key + '"' if key else ''}>
+    <div class="metric-card">
+        <div class="accent-line" style="background:linear-gradient(90deg, {accent_color}, #8b5cf6);"></div>
         <div class="metric-value">{value}</div>
         <div class="metric-label">{label}</div>
+        {trend_html}
     </div>
     """
 
 
-def score_badge(penalty):
+def badge_html(penalty):
     if penalty < 0.3:
-        return '<span class="badge-honeypot">HIGH-RISK HONEYPOT</span>'
+        return '<span class="badge badge-honeypot">HONEYPOT</span>'
     elif penalty < 0.8:
-        return '<span class="badge-suspicious">SUSPICIOUS</span>'
-    return '<span class="badge-clean">VERIFIED</span>'
+        return '<span class="badge badge-suspicious">SUSPICIOUS</span>'
+    return '<span class="badge badge-clean">VERIFIED</span>'
 
-
-# ── Header ──────────────────────────────────────────────────────────────────
-
-col_logo, col_title = st.columns([0.1, 0.9])
-with col_title:
-    st.markdown('<div class="main-header">\U0001F3C6 Redrob Candidate Ranker</div>',
-                unsafe_allow_html=True)
-    st.markdown(
-        '<div class="main-subtitle">'
-        'Multi-component rule-based ranking engine &bull; 10 dimensions &bull; 8 honeypot checks'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
-st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
 
 # ── Sidebar ─────────────────────────────────────────────────────────────────
 
 with st.sidebar:
-    st.markdown('<div class="sidebar-section-header">\U0001F4E5 Custom Input</div>',
-                unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-title">\U0001F4E5 Data Source</div>', unsafe_allow_html=True)
 
-    # File upload
+    # File upload (JSON + CSV + Excel)
     uploaded_file = st.file_uploader(
-        "Upload JSON",
-        type=["json"],
+        "Upload file",
+        type=["json", "csv", "xlsx", "xls"],
         label_visibility="collapsed",
-        help="Upload a .json file with an array of candidate objects.",
+        help="Upload JSON, CSV, or Excel (.xlsx/.xls) files",
     )
+
     if uploaded_file is not None:
         try:
-            raw = uploaded_file.read().decode("utf-8")
-            candidates = parse_json_input(raw)
+            ext = uploaded_file.name.split(".")[-1].lower()
+
+            if ext == "json":
+                raw = uploaded_file.read().decode("utf-8")
+                candidates = parse_json_input(raw)
+            elif ext == "csv":
+                df = pd.read_csv(uploaded_file)
+                candidates = parse_tabular_data(df)
+            elif ext in ("xlsx", "xls"):
+                df = pd.read_excel(uploaded_file, engine="openpyxl")
+                candidates = parse_tabular_data(df)
+
             st.success(f"\u2713 Loaded {len(candidates)} candidates")
-            if st.button("\U0001F680 Run on Uploaded Data",
+            if st.button("\U0001F680 Run Ranker",
                          type="primary", use_container_width=True):
                 with st.spinner("Ranking..."):
-                    run_ranker(candidates, f"Upload: {len(candidates)} candidates")
+                    run_ranker(candidates, f"File: {uploaded_file.name}")
         except Exception as e:
-            st.error(f"Parse error: {e}")
+            st.error(f"Error: {e}")
+
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
     # Paste JSON
-    with st.expander("\U0001F4DD Paste JSON", expanded=False):
-        pasted_json = st.text_area(
-            "", height=160,
-            placeholder='[{"candidate_id": "CAND_0001", ...}]',
-            label_visibility="collapsed",
-        )
-        if pasted_json.strip():
+    st.markdown('<div class="sidebar-title">\U0001F4DD Paste Input</div>', unsafe_allow_html=True)
+    with st.expander("Paste JSON", expanded=False):
+        pasted = st.text_area("", height=140,
+                              placeholder='[{"candidate_id": "CAND_0001", ...}]',
+                              label_visibility="collapsed")
+        if pasted.strip():
             try:
-                candidates = parse_json_input(pasted_json)
+                candidates = parse_json_input(pasted)
                 st.success(f"\u2713 Parsed {len(candidates)} candidates")
                 if st.button("\U0001F680 Run on Pasted Data",
                              type="primary", use_container_width=True):
                     with st.spinner("Ranking..."):
-                        run_ranker(candidates, f"Pasted: {len(candidates)} candidates")
+                        run_ranker(candidates, "Pasted JSON")
             except Exception as e:
-                st.error(f"Parse error: {e}")
+                st.error(f"Error: {e}")
 
-    st.markdown('<hr style="border-color: rgba(255,255,255,0.05); margin: 1rem 0;">',
-                unsafe_allow_html=True)
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
     # Sample data
-    st.markdown('<div class="sidebar-section-header">\U0001F4CA Sample Data</div>',
-                unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-title">\U0001F4CA Sample</div>', unsafe_allow_html=True)
     if st.button("\U0001F504 Run Sample (20 candidates)",
                  type="secondary", use_container_width=True):
-        with st.spinner("Ranking sample data..."):
+        with st.spinner("Running..."):
             if not os.path.exists(SAMPLE_PATH):
                 st.error("Sample data not found")
                 st.stop()
             with open(SAMPLE_PATH) as f:
                 samples = json.load(f)
-            run_ranker(samples, "Sample: 20 candidates")
-            st.success("Done!")
+            run_ranker(samples, "Sample Data")
 
-    # Feature weights
+    # Show weights when results exist
     if "rankings" in st.session_state:
         import config as cfg
-        st.markdown('<hr style="border-color: rgba(255,255,255,0.05); margin: 1rem 0;">',
-                    unsafe_allow_html=True)
-        st.markdown('<div class="sidebar-section-header">\u2696\uFE0F Weights</div>',
-                    unsafe_allow_html=True)
+        st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="sidebar-title">\u2696\uFE0F Weights</div>', unsafe_allow_html=True)
         for name, weight in cfg.WEIGHTS.items():
             label = name.replace("_", " ").title()
-            pct = weight * 100
             st.markdown(
                 f'<div style="display:flex;justify-content:space-between;'
-                f'color:#a0aec0;font-size:0.85rem;margin-bottom:0.2rem;">'
-                f'<span>{label}</span><span>{pct:.0f}%</span></div>',
+                f'color:#64748b;font-size:0.8rem;margin-bottom:0.15rem;">'
+                f'<span>{label}</span><span>{weight*100:.0f}%</span></div>',
                 unsafe_allow_html=True
             )
             st.progress(weight)
 
-# ── Main content area ───────────────────────────────────────────────────────
+# ── Main Content ────────────────────────────────────────────────────────────
 
 if "rankings" in st.session_state:
     rankings = st.session_state["rankings"]
     total = st.session_state["total"]
     source = st.session_state.get("source", "")
+    elapsed = st.session_state["elapsed"]
 
-    st.markdown(f'<div class="source-label">\U0001F4CC Source: {source}</div>',
-                unsafe_allow_html=True)
-
-    # ── Top-level metrics ──
+    # Compute metrics
     top_score = rankings[0][0]
     bottom_score = rankings[-1][0]
     honeypot_count = sum(1 for h in rankings if h[3] < 0.5)
     suspicious_count = sum(1 for h in rankings if 0.5 <= h[3] < 0.8)
     clean_count = total - honeypot_count - suspicious_count
-    elapsed = st.session_state["elapsed"]
 
-    # Pre-compute labels (avoids backslash issues in f-string expressions on Python 3.11)
-    label_honeypot = "\U0001F534 Honeypots"
-    label_suspicious = "\U0001F7E1 Suspicious"
-    label_clean = "\u2705 Clean"
-
-    metrics_html = f"""
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.8rem;margin-bottom:1.5rem;">
-        {make_metric(f'{total:,}', 'Candidates')}
-        {make_metric(f'{elapsed:.2f}s', 'Time')}
-        {make_metric(f'{top_score:.4f}', 'Top Score')}
-        {make_metric(f'{bottom_score:.4f}', 'Bottom Score')}
-        {make_metric(f'{honeypot_count}', label_honeypot, 'honeypot-metric')}
-        {make_metric(f'{suspicious_count}', label_suspicious, 'suspicious-metric')}
-        {make_metric(f'{clean_count}', label_clean, 'clean-metric')}
-    </div>
-    """
-    st.markdown(metrics_html, unsafe_allow_html=True)
-
-    st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-
-    # ── Score distribution chart ──
-    scores = [r[0] for r in rankings]
-
-    fig = go.Figure()
-
-    # Histogram with gradient
-    fig.add_trace(go.Histogram(
-        x=scores,
-        nbinsx=25,
-        name="Candidates",
-        marker=dict(
-            color=scores,
-            colorscale=[[0, '#f56565'], [0.5, '#ed8936'], [1, '#48bb78']],
-            line=dict(color='rgba(255,255,255,0.1)', width=1),
-        ),
-        hovertemplate="Score: %{x:.4f}<br>Count: %{y}<extra></extra>",
-    ))
-
-    # Vertical line for top score
-    fig.add_vline(
-        x=top_score,
-        line_dash="dash",
-        line_color="#667eea",
-        annotation_text=f"Top: {top_score:.4f}",
-        annotation_position="top left",
-        annotation_font=dict(color="#667eea", size=11),
-    )
-
-    fig.update_layout(
-        title=dict(
-            text="<b>Score Distribution</b>",
-            font=dict(color="#e2e8f0", size=16),
-        ),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#a0aec0", size=12),
-        xaxis=dict(
-            title="Score",
-            gridcolor="rgba(255,255,255,0.05)",
-            zeroline=False,
-        ),
-        yaxis=dict(
-            title="Candidates",
-            gridcolor="rgba(255,255,255,0.05)",
-            zeroline=False,
-        ),
-        margin=dict(l=40, r=40, t=50, b=40),
-        hovermode="x",
-        bargap=0.06,
-    )
-
-    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-    st.plotly_chart(fig, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # ── Honeypot pie chart ──
-    labels = ["Clean", "Suspicious", "Honeypot"]
-    values = [clean_count, suspicious_count, honeypot_count]
-    colors = ["#48bb78", "#ed8936", "#f56565"]
-
-    fig2 = go.Figure(data=[go.Pie(
-        labels=labels,
-        values=values,
-        marker=dict(colors=colors, line=dict(color="#1a1a2e", width=2)),
-        textinfo="label+percent",
-        textfont=dict(color="#e2e8f0", size=13),
-        hovertemplate="%{label}: %{value} (%{percent})<extra></extra>",
-        hole=0.55,
-    )])
-
-    fig2.update_layout(
-        title=dict(
-            text="<b>Candidate Integrity</b>",
-            font=dict(color="#e2e8f0", size=16),
-        ),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#a0aec0", size=12),
-        margin=dict(l=20, r=20, t=50, b=20),
-        showlegend=False,
-        annotations=[dict(
-            text=f"{clean_count}<br>Clean",
-            x=0.5, y=0.5,
-            font=dict(size=18, color="#48bb78"),
-            showarrow=False,
-        )],
-    )
-
-    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-    st.plotly_chart(fig2, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # ── Rankings list ──
-    st.markdown(f'<h3 style="color:#e2e8f0;margin-bottom:1rem;">'
-                f'\U0001F3C5 Rankings (Top {len(rankings)})</h3>',
+    # ── Enterprise Metric Cards ──
+    st.markdown(f'<div style="color:#64748b;font-size:0.8rem;margin-bottom:0.5rem;">'
+                f'Source: {source} &bull; {time.strftime("%b %d, %Y %H:%M")}</div>',
                 unsafe_allow_html=True)
 
-    for rank, (score, cid, reasoning, penalty, issues) in enumerate(rankings, 1):
-        badge = score_badge(penalty)
-        pct = min(score * 100, 100)
+    st.markdown(f"""
+    <div class="metric-grid">
+        {make_metric_card(f'{total:,}', 'Candidates', '#3b82f6')}
+        {make_metric_card(f'{elapsed:.2f}s', 'Processing Time', '#8b5cf6')}
+        {make_metric_card(f'{top_score:.4f}', 'Top Score', '#34d399')}
+        {make_metric_card(f'{bottom_score:.4f}', 'Min Score', '#fbbf24')}
+        {make_metric_card(f'{honeypot_count}', 'Honeypots', '#f87171')}
+        {make_metric_card(f'{suspicious_count}', 'Suspicious', '#fbbf24')}
+        {make_metric_card(f'{clean_count}', 'Verified', '#34d399')}
+    </div>
+    """, unsafe_allow_html=True)
 
-        # Determine accent color for progress bar
-        if penalty < 0.3:
-            bar_color = "#f56565"
-        elif penalty < 0.8:
-            bar_color = "#ed8936"
-        else:
-            bar_color = "#48bb78"
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
-        issues_html = ""
-        if issues:
-            issues_list = "; ".join(issues[:3])
-            issues_html = f'<div class="issues-text">\u26A0\uFE0F {issues_list}</div>'
+    # ── Tabs ──
+    tab1, tab2, tab3 = st.tabs(["\U0001F4CA Dashboard", "\U0001F3C5 Rankings", "\U0001F4CA Insights"])
 
-        card_html = f"""
-        <div class="candidate-card" style="animation-delay:{rank * 0.03}s">
-            <div style="display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;">
-                <div class="candidate-rank">#{rank}</div>
-                <div style="flex:1;min-width:120px;">
-                    <div class="candidate-id">{cid}</div>
-                    <div class="candidate-score" style="color:#a0aec0;font-size:0.85rem;">
-                        Score: {score:.4f} &bull; Pen: {penalty:.2f}
+    # ── Tab 1: Dashboard ──
+    with tab1:
+        col_chart1, col_chart2 = st.columns(2)
+
+        with col_chart1:
+            scores = [r[0] for r in rankings]
+
+            fig = go.Figure()
+            fig.add_trace(go.Histogram(
+                x=scores,
+                nbinsx=20,
+                marker=dict(
+                    color=scores,
+                    colorscale=[[0, '#f87171'], [0.5, '#fbbf24'], [1, '#34d399']],
+                    line=dict(color='rgba(255,255,255,0.05)', width=1),
+                ),
+                hovertemplate="Score: %{x:.4f}<br>Count: %{y}<extra></extra>",
+            ))
+            fig.add_vline(
+                x=top_score, line_dash="dash", line_color="#3b82f6",
+                annotation_text=f"Top: {top_score:.4f}",
+                annotation_position="top left",
+                annotation_font=dict(color="#3b82f6", size=10),
+            )
+            fig.update_layout(
+                title=dict(text="<b>Score Distribution</b>", font=dict(color="#e2e8f0", size=14)),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#64748b", size=11),
+                xaxis=dict(title="Score", gridcolor="rgba(255,255,255,0.03)", zeroline=False),
+                yaxis=dict(title="Candidates", gridcolor="rgba(255,255,255,0.03)", zeroline=False),
+                margin=dict(l=30, r=30, t=40, b=30),
+                hovermode="x", bargap=0.06,
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col_chart2:
+            labels = ["Verified", "Suspicious", "Honeypot"]
+            values = [clean_count, suspicious_count, honeypot_count]
+            colors = ["#34d399", "#fbbf24", "#f87171"]
+
+            fig2 = go.Figure(data=[go.Pie(
+                labels=labels, values=values,
+                marker=dict(colors=colors, line=dict(color="#0a0e17", width=2)),
+                textinfo="label+percent",
+                textfont=dict(color="#e2e8f0", size=12),
+                hovertemplate="%{label}: %{value} (%{percent})<extra></extra>",
+                hole=0.55,
+            )])
+            fig2.update_layout(
+                title=dict(text="<b>Candidate Integrity</b>", font=dict(color="#e2e8f0", size=14)),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#64748b", size=11),
+                margin=dict(l=20, r=20, t=40, b=20),
+                showlegend=False,
+                annotations=[dict(
+                    text=f"{clean_count}<br>Verified",
+                    x=0.5, y=0.5,
+                    font=dict(size=16, color="#34d399"),
+                    showarrow=False,
+                )],
+            )
+            st.plotly_chart(fig2, use_container_width=True)
+
+        # ── Top 5 Quick View ──
+        st.markdown('<h4 style="color:#e2e8f0;font-size:1rem;margin:1rem 0 0.5rem 0;">\U0001F525 Top 5 Candidates</h4>',
+                    unsafe_allow_html=True)
+
+        for rank, (score, cid, reasoning, penalty, issues) in enumerate(rankings[:5], 1):
+            pct = min(score * 100, 100)
+            bar_color = "#f87171" if penalty < 0.3 else ("#fbbf24" if penalty < 0.8 else "#34d399")
+
+            st.markdown(f"""
+            <div class="rank-card">
+                <div style="display:flex;align-items:center;gap:0.8rem;">
+                    <div class="rank-number">#{rank}</div>
+                    <div style="flex:1;">
+                        <div class="candidate-name">{cid}</div>
+                        <div class="candidate-meta">{reasoning[:120]}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div class="score-text" style="color:{bar_color};font-size:1.1rem;">{score:.4f}</div>
+                        {badge_html(penalty)}
                     </div>
                 </div>
-                <div>{badge}</div>
+                <div class="score-bar">
+                    <div class="score-bar-fill" style="width:{pct:.1f}%;background:{bar_color};"></div>
+                </div>
             </div>
-            <div style="margin:0.5rem 0 0.3rem 0;height:4px;background:rgba(255,255,255,0.06);
-                        border-radius:4px;overflow:hidden;">
-                <div style="height:100%;width:{pct:.1f}%;background:{bar_color};
-                            border-radius:4px;transition:width 1s ease;"></div>
-            </div>
-            <div style="color:#cbd5e0;font-size:0.9rem;line-height:1.4;margin-top:0.4rem;">
-                {reasoning}
-            </div>
-            {issues_html}
-        </div>
-        """
+            """, unsafe_allow_html=True)
 
-        st.markdown(card_html, unsafe_allow_html=True)
+    # ── Tab 2: Full Rankings ──
+    with tab2:
+        col_left, col_right = st.columns([1, 3])
+        with col_left:
+            search_term = st.text_input("\U0001F50D Search", placeholder="Candidate ID...")
+            min_score = st.slider("Min Score", 0.0, 1.0, 0.7, 0.01)
+        with col_right:
+            st.markdown(f'<div style="color:#64748b;font-size:0.85rem;margin-bottom:0.5rem;">'
+                        f'Showing {len(rankings)} candidates | Sorted by score (desc)</div>',
+                        unsafe_allow_html=True)
+
+            for rank, (score, cid, reasoning, penalty, issues) in enumerate(rankings, 1):
+                if score < min_score:
+                    continue
+                if search_term and search_term.lower() not in cid.lower():
+                    continue
+
+                pct = min(score * 100, 100)
+                bar_color = "#f87171" if penalty < 0.3 else ("#fbbf24" if penalty < 0.8 else "#34d399")
+
+                issues_html = ""
+                if issues:
+                    issues_html = f'<div style="color:#f87171;font-size:0.75rem;margin-top:0.2rem;">\u26A0 {"; ".join(issues[:2])}</div>'
+
+                st.markdown(f"""
+                <div class="rank-card" style="animation-delay:{(rank % 20) * 0.02}s">
+                    <div style="display:flex;align-items:center;gap:0.8rem;">
+                        <div class="rank-number" style="min-width:2rem;">#{rank}</div>
+                        <div style="flex:1;">
+                            <div class="candidate-name">{cid}</div>
+                            <div class="candidate-meta">{reasoning[:150]}</div>
+                            {issues_html}
+                        </div>
+                        <div style="text-align:right;">
+                            <div class="score-text" style="color:{bar_color};font-size:0.95rem;">{score:.4f}</div>
+                            {badge_html(penalty)}
+                        </div>
+                    </div>
+                    <div class="score-bar">
+                        <div class="score-bar-fill" style="width:{pct:.1f}%;background:{bar_color};"></div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+    # ── Tab 3: Insights ──
+    with tab3:
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown('<h4 style="color:#e2e8f0;font-size:0.95rem;">Detection Summary</h4>',
+                        unsafe_allow_html=True)
+
+            # Honeypot issue frequency
+            all_issues = []
+            for _, _, _, _, issues in rankings:
+                for i in issues:
+                    # Categorize
+                    if "timeline" in i:
+                        all_issues.append("Timeline inconsistency")
+                    elif "overlapping" in i:
+                        all_issues.append("Overlapping education")
+                    elif "AI skills" in i:
+                        all_issues.append("AI skills mismatch")
+                    elif "endorsements" in i:
+                        all_issues.append("Endorsement mismatch")
+                    elif "exceeds" in i:
+                        all_issues.append("Career exceeds experience")
+                    elif "empty" in i or "short" in i:
+                        all_issues.append("Short/empty descriptions")
+                    elif "hopping" in i or "duration" in i:
+                        all_issues.append("Job-hopping")
+                    elif "summary" in i:
+                        all_issues.append("Summary mismatch")
+                    elif "salary" in i:
+                        all_issues.append("Salary anomaly")
+                    elif "signup" in i:
+                        all_issues.append("Date anomaly")
+                    elif "offer" in i:
+                        all_issues.append("Offer/interview mismatch")
+                    else:
+                        all_issues.append("Other")
+
+            if all_issues:
+                issue_counts = Counter(all_issues)
+                issue_df = pd.DataFrame([
+                    {"Issue": k, "Count": v}
+                    for k, v in issue_counts.most_common()
+                ])
+
+                fig3 = px.bar(
+                    issue_df, x="Count", y="Issue", orientation="h",
+                    color="Count", color_continuous_scale=["#fbbf24", "#f87171"],
+                    text="Count",
+                )
+                fig3.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="#64748b", size=11),
+                    xaxis=dict(gridcolor="rgba(255,255,255,0.03)", title=""),
+                    yaxis=dict(title=""),
+                    margin=dict(l=10, r=10, t=10, b=10),
+                    showlegend=False,
+                )
+                fig3.update_traces(textposition="outside", textfont=dict(color="#e2e8f0"))
+                st.plotly_chart(fig3, use_container_width=True)
+            else:
+                st.info("No issues detected in top ranks.")
+
+        with col2:
+            st.markdown('<h4 style="color:#e2e8f0;font-size:0.95rem;">Score vs Penalty</h4>',
+                        unsafe_allow_html=True)
+
+            scatter_data = pd.DataFrame({
+                "Score": [r[0] for r in rankings],
+                "Penalty": [r[3] for r in rankings],
+                "Status": ["Honeypot" if r[3] < 0.3 else ("Suspicious" if r[3] < 0.8 else "Verified")
+                           for r in rankings],
+            })
+
+            fig4 = px.scatter(
+                scatter_data, x="Score", y="Penalty", color="Status",
+                color_discrete_map={"Verified": "#34d399", "Suspicious": "#fbbf24", "Honeypot": "#f87171"},
+                opacity=0.7, size=[8] * len(scatter_data),
+                hover_data={"Status": True},
+            )
+            fig4.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#64748b", size=11),
+                xaxis=dict(gridcolor="rgba(255,255,255,0.03)", range=[0.5, 1.0]),
+                yaxis=dict(gridcolor="rgba(255,255,255,0.03)", range=[0, 1.0]),
+                margin=dict(l=10, r=10, t=10, b=10),
+                legend=dict(font=dict(color="#64748b")),
+            )
+            st.plotly_chart(fig4, use_container_width=True)
+
+        # Bottom: pipeline info
+        st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+        col_info1, col_info2, col_info3 = st.columns(3)
+        with col_info1:
+            st.markdown(
+                f'<div style="color:#64748b;font-size:0.85rem;">'
+                f'<strong style="color:#94a3b8;">Engine:</strong> 10-component ranker</div>',
+                unsafe_allow_html=True)
+        with col_info2:
+            st.markdown(
+                f'<div style="color:#64748b;font-size:0.85rem;">'
+                f'<strong style="color:#94a3b8;">Honeypot checks:</strong> 11</div>',
+                unsafe_allow_html=True)
+        with col_info3:
+            st.markdown(
+                f'<div style="color:#64748b;font-size:0.85rem;">'
+                f'<strong style="color:#94a3b8;">Throughput:</strong> {total/elapsed:.0f} cand/s</div>',
+                unsafe_allow_html=True)
 
     # Clear button
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2:
-        if st.button("\U0001F5D1 Clear & Start Over",
-                     type="secondary", use_container_width=True):
-            for key in ["rankings", "elapsed", "total", "source"]:
-                if key in st.session_state:
-                    del st.session_state[key]
-            st.rerun()
+    st.markdown('<div style="text-align:center;margin-top:1rem;">', unsafe_allow_html=True)
+    if st.button("\U0001F5D1 Clear & Start Over",
+                 type="secondary", use_container_width=False):
+        for key in ["rankings", "elapsed", "total", "source", "active_tab"]:
+            if key in st.session_state:
+                del st.session_state[key]
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 else:
-    # ── Welcome state ──
-    col_left, col_right = st.columns([2, 1])
+    # ── Welcome / Empty State ──
+    col_intro, col_preview = st.columns([1.5, 1])
 
-    with col_left:
+    with col_intro:
         st.markdown("""
-        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);
-                    border-radius:16px;padding:2rem;margin-bottom:1.5rem;">
-            <h3 style="color:#e2e8f0;margin-top:0;">\U0001F44B Welcome!</h3>
-            <p style="color:#a0aec0;font-size:1.05rem;line-height:1.6;">
-            This tool ranks candidates for a <strong style="color:#e2e8f0;">Senior AI Engineer
-            (Founding Team)</strong> role using a 10-component rule-based scoring engine.
+        <div style="background:linear-gradient(135deg,rgba(30,41,59,0.6),rgba(15,23,42,0.6));
+                    border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:2rem;">
+            <h3 style="color:#e2e8f0;margin:0 0 0.5rem 0;font-size:1.3rem;">
+                \U0001F44B Welcome to Candidate Ranker
+            </h3>
+            <p style="color:#94a3b8;font-size:0.95rem;line-height:1.6;">
+            Enterprise-grade candidate ranking for <strong style="color:#e2e8f0;">Senior AI Engineer</strong>
+            roles. Upload your candidate data in <strong>JSON</strong>, <strong>CSV</strong>, or
+            <strong>Excel</strong> format and get instant AI-powered rankings.
             </p>
-            <p style="color:#718096;font-size:0.95rem;">
-            Choose one of the options in the <strong>sidebar</strong>:
-            </p>
-            <ul style="color:#a0aec0;line-height:1.8;padding-left:1.2rem;">
-                <li>\U0001F4E5 <strong>Upload</strong> a JSON file of candidates</li>
-                <li>\U0001F4DD <strong>Paste</strong> JSON data directly</li>
-                <li>\U0001F4CA <strong>Run sample</strong> data (20 pre-loaded candidates)</li>
-            </ul>
+            <div style="display:flex;gap:0.8rem;flex-wrap:wrap;margin-top:1.5rem;">
+                <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.15);
+                            border-radius:8px;padding:0.6rem 1rem;text-align:center;flex:1;min-width:100px;">
+                    <div style="font-size:1.3rem;">\U0001F4E5</div>
+                    <div style="color:#64748b;font-size:0.7rem;margin-top:0.2rem;">Upload</div>
+                </div>
+                <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.15);
+                            border-radius:8px;padding:0.6rem 1rem;text-align:center;flex:1;min-width:100px;">
+                    <div style="font-size:1.3rem;">\U0001F4CA</div>
+                    <div style="color:#64748b;font-size:0.7rem;margin-top:0.2rem;">Analyze</div>
+                </div>
+                <div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.15);
+                            border-radius:8px;padding:0.6rem 1rem;text-align:center;flex:1;min-width:100px;">
+                    <div style="font-size:1.3rem;">\U0001F3C5</div>
+                    <div style="color:#64748b;font-size:0.7rem;margin-top:0.2rem;">Rank</div>
+                </div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
-    with col_right:
-        # Sample preview
-        if os.path.exists(SAMPLE_PATH):
-            with open(SAMPLE_PATH) as f:
-                samples = json.load(f)
-            st.markdown("""
-            <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);
-                        border-radius:16px;padding:1.5rem;">
-                <h4 style="color:#e2e8f0;margin-top:0;font-size:0.95rem;">
-                    \U0001F4CB Candidate Preview
-                </h4>
-            """, unsafe_allow_html=True)
-            for s in samples[:4]:
-                p = s.get("profile", {})
-                st.markdown(
-                    f'<div style="color:#a0aec0;font-size:0.85rem;padding:0.3rem 0;'
-                    f'border-bottom:1px solid rgba(255,255,255,0.04);">'
-                    f'<strong style="color:#e2e8f0;">{p.get("anonymized_name", "?")}</strong>'
-                    f' &mdash; {p.get("current_title", "?")} @ {p.get("current_company", "?")}'
-                    f'<br><span style="color:#718096;">{p.get("location", "?")}</span>'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
+    with col_preview:
+        st.markdown("""
+        <div style="background:linear-gradient(135deg,rgba(30,41,59,0.4),rgba(15,23,42,0.4));
+                    border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:1.5rem;">
+            <h4 style="color:#e2e8f0;margin:0 0 0.5rem 0;font-size:0.95rem;">
+                \U0001F4CB Supported Formats
+            </h4>
+            <div style="color:#94a3b8;font-size:0.85rem;line-height:1.8;">
+                <div>\U0001F4C4 <strong>JSON</strong> &mdash; Array of candidate objects</div>
+                <div>\U0001F4C4 <strong>CSV</strong> &mdash; Flat column format</div>
+                <div>\U0001F4C4 <strong>Excel</strong> &mdash; .xlsx / .xls files</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Sample preview
+    if os.path.exists(SAMPLE_PATH):
+        with open(SAMPLE_PATH) as f:
+            samples = json.load(f)
+        st.markdown(f"""
+        <div style="margin-top:1rem;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);
+                    border-radius:10px;padding:1rem;">
+            <h4 style="color:#64748b;margin:0 0 0.5rem 0;font-size:0.85rem;text-transform:uppercase;
+                       letter-spacing:0.5px;">\U0001F4CB Sample Data Preview</h4>
+        """, unsafe_allow_html=True)
+        for s in samples[:5]:
+            p = s.get("profile", {})
             st.markdown(
-                f'<div style="color:#718096;font-size:0.8rem;padding-top:0.5rem;">'
-                f'... and {len(samples) - 4} more</div>',
+                f'<div style="color:#64748b;font-size:0.8rem;padding:0.2rem 0;'
+                f'border-bottom:1px solid rgba(255,255,255,0.03);">'
+                f'<span style="color:#94a3b8;">{p.get("anonymized_name", "?")}</span>'
+                f' &mdash; {p.get("current_title", "?")} @ {p.get("current_company", "?")}'
+                f'</div>',
                 unsafe_allow_html=True
             )
-            st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div style="color:#475569;font-size:0.75rem;padding-top:0.3rem;">'
+            f'... and {len(samples) - 5} more</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── Algorithm details ──
-    with st.expander("\U0001F4D6 About the Ranking Algorithm", expanded=False):
-        col_tab1, col_tab2 = st.columns(2)
-        with col_tab1:
-            st.markdown("""
-            ### Scoring Components
-            | Component | Weight | Description |
-            |---|---|---|
-            | **Career Relevance** | 35% | Title tier, industry, startup bonus |
-            | **Role Relevance** | 20% | Current title + headline match |
-            | **Prod AI Evidence** | 14% | ML deployment + retrieval exp |
-            | **Retrieval & Ranking** | 10% | Search/ranking systems |
-            | **Behavioral Signals** | 10% | Response rate, GitHub activity |
-            | **Experience Fit** | 5% | Peak 5–9 years |
-            | **Skills Match** | 3% | Keyword coverage |
-            | **Education** | 3% | Tier + field relevance |
-            | **Location Bonus** | +3% | Pune/Noida preference |
-            | **Notice Period** | +2% | Sub-30 day preference |
-            """)
-        with col_tab2:
-            st.markdown("""
-            ### Honeypot Detection
-            8 checks to filter out low-quality profiles:
-            - Timeline inconsistency
-            - Overlapping education periods
-            - AI skills without background
-            - Missing/short descriptions
-            - Job-hopping patterns
-            - Summary mismatch
-            - Career exceeds stated experience
-            - Endorsement mismatch
-            ### Performance
-            **100K candidates** in ~92s (CPU-only)
-            **13,135 honeypots** detected
-            **0 honeypots** in top 100
-            """)
-
-st.markdown("""
-<div style="margin-top:2rem;padding:1rem 0;border-top:1px solid rgba(255,255,255,0.05);
-            text-align:center;color:#4a5568;font-size:0.8rem;">
-    Built for the Redrob Hackathon &mdash; Intelligent Candidate Discovery &amp; Ranking Challenge
-</div>
-""", unsafe_allow_html=True)
+st.markdown('<div class="footer">Built for the Redrob Hackathon &mdash; Intelligent Candidate Discovery &amp; Ranking Challenge</div>',
+            unsafe_allow_html=True)
