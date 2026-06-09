@@ -53,81 +53,99 @@ else:
 
 # CSS variable definitions for both themes
 DARK_VARS = """
-    --bg-primary: #0a0e17;
-    --bg-secondary: #0f1629;
-    --bg-tertiary: #1a1f3a;
-    --bg-card: rgba(30,41,59,0.8);
-    --bg-card-alt: rgba(15,23,42,0.8);
-    --bg-card-hover: rgba(30,41,59,0.6);
-    --bg-welcome: rgba(30,41,59,0.6);
-    --bg-preview: rgba(30,41,59,0.4);
-    --bg-sample: rgba(255,255,255,0.02);
-    --sidebar-bg: #0f1629;
-    --text-primary: #f1f5f9;
-    --text-secondary: #e2e8f0;
-    --text-muted: #64748b;
-    --text-muted-dark: #94a3b8;
-    --text-dim: #334155;
-    --text-dim2: #475569;
-    --border-color: rgba(255,255,255,0.06);
-    --border-light: rgba(255,255,255,0.05);
-    --border-card: rgba(255,255,255,0.05);
-    --border-hover: rgba(59,130,246,0.2);
+    --bg-primary: #080c16;
+    --bg-secondary: #0d1325;
+    --bg-tertiary: #131b2e;
+    --bg-card: rgba(20, 28, 50, 0.75);
+    --bg-card-alt: rgba(13, 19, 37, 0.8);
+    --bg-card-hover: rgba(30, 41, 59, 0.5);
+    --bg-welcome: rgba(30, 41, 59, 0.5);
+    --bg-preview: rgba(30, 41, 59, 0.35);
+    --bg-sample: rgba(255,255,255,0.015);
+    --sidebar-bg: rgba(10, 16, 30, 0.95);
+    --text-primary: #f0f4ff;
+    --text-secondary: #d4e0f5;
+    --text-muted: #6b7fa0;
+    --text-muted-dark: #8fa6c9;
+    --text-dim: #2a3650;
+    --text-dim2: #3d4f6f;
+    --border-color: rgba(100, 140, 255, 0.06);
+    --border-light: rgba(100, 140, 255, 0.04);
+    --border-card: rgba(100, 140, 255, 0.05);
+    --border-hover: rgba(59,130,246,0.25);
     --accent-blue: #3b82f6;
     --accent-blue-light: #60a5fa;
     --accent-blue-dark: #2563eb;
     --accent-purple: #8b5cf6;
+    --accent-cyan: #06b6d4;
     --success: #34d399;
     --warning: #fbbf24;
     --danger: #f87171;
     --gradient-blue: linear-gradient(135deg, #3b82f6, #8b5cf6);
-    --gradient-nav: linear-gradient(135deg, #0f1629 0%, #1a1f3a 100%);
-    --shadow: 0 8px 25px rgba(59,130,246,0.08);
+    --gradient-cyan: linear-gradient(135deg, #06b6d4, #3b82f6);
+    --gradient-warm: linear-gradient(135deg, #f59e0b, #f97316);
+    --gradient-dang: linear-gradient(135deg, #ef4444, #f97316);
+    --gradient-nav: linear-gradient(135deg, rgba(10,16,30,0.98) 0%, rgba(20,28,50,0.95) 100%);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+    --shadow: 0 4px 20px rgba(0,0,0,0.25);
+    --shadow-lg: 0 8px 35px rgba(0,0,0,0.35);
+    --shadow-glow: 0 0 20px rgba(59,130,246,0.08);
     --chart-bg: rgba(0,0,0,0);
     --chart-grid: rgba(255,255,255,0.03);
-    --badge-clean-bg: rgba(52,211,153,0.12);
-    --badge-suspicious-bg: rgba(251,191,36,0.12);
-    --badge-honeypot-bg: rgba(248,113,113,0.12);
-    --score-bar-bg: rgba(255,255,255,0.06);
+    --badge-clean-bg: rgba(52,211,153,0.1);
+    --badge-suspicious-bg: rgba(251,191,36,0.1);
+    --badge-honeypot-bg: rgba(248,113,113,0.1);
+    --score-bar-bg: rgba(255,255,255,0.04);
+    --popover-bg: rgba(13, 19, 37, 0.97);
+    --profile-section-bg: rgba(13, 19, 37, 0.5);
 """
 
 LIGHT_VARS = """
-    --bg-primary: #f8fafc;
+    --bg-primary: #f6f8fc;
     --bg-secondary: #ffffff;
-    --bg-tertiary: #f1f5f9;
-    --bg-card: rgba(255,255,255,0.95);
-    --bg-card-alt: rgba(248,250,252,0.95);
-    --bg-card-hover: rgba(248,250,252,0.85);
-    --bg-welcome: rgba(255,255,255,0.8);
-    --bg-preview: rgba(255,255,255,0.7);
-    --bg-sample: rgba(0,0,0,0.02);
-    --sidebar-bg: #ffffff;
-    --text-primary: #0f172a;
-    --text-secondary: #1e293b;
-    --text-muted: #64748b;
-    --text-muted-dark: #475569;
-    --text-dim: #94a3b8;
-    --text-dim2: #cbd5e1;
-    --border-color: rgba(0,0,0,0.08);
-    --border-light: rgba(0,0,0,0.06);
-    --border-card: rgba(0,0,0,0.06);
-    --border-hover: rgba(59,130,246,0.3);
+    --bg-tertiary: #eef2f7;
+    --bg-card: rgba(255,255,255,0.85);
+    --bg-card-alt: rgba(248,250,252,0.9);
+    --bg-card-hover: rgba(248,250,252,0.8);
+    --bg-welcome: rgba(255,255,255,0.75);
+    --bg-preview: rgba(255,255,255,0.65);
+    --bg-sample: rgba(0,0,0,0.015);
+    --sidebar-bg: rgba(255,255,255,0.98);
+    --text-primary: #0b1a33;
+    --text-secondary: #1e2f50;
+    --text-muted: #5e7396;
+    --text-muted-dark: #3d5278;
+    --text-dim: #8fa6c9;
+    --text-dim2: #aebfdb;
+    --border-color: rgba(0,0,0,0.06);
+    --border-light: rgba(0,0,0,0.04);
+    --border-card: rgba(0,0,0,0.05);
+    --border-hover: rgba(59,130,246,0.35);
     --accent-blue: #2563eb;
     --accent-blue-light: #3b82f6;
     --accent-blue-dark: #1d4ed8;
     --accent-purple: #7c3aed;
+    --accent-cyan: #0891b2;
     --success: #10b981;
     --warning: #d97706;
     --danger: #ef4444;
     --gradient-blue: linear-gradient(135deg, #2563eb, #7c3aed);
+    --gradient-cyan: linear-gradient(135deg, #0891b2, #2563eb);
+    --gradient-warm: linear-gradient(135deg, #f59e0b, #f97316);
+    --gradient-dang: linear-gradient(135deg, #ef4444, #f97316);
     --gradient-nav: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
-    --shadow: 0 8px 25px rgba(0,0,0,0.06);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+    --shadow: 0 4px 20px rgba(0,0,0,0.04);
+    --shadow-lg: 0 8px 35px rgba(0,0,0,0.06);
+    --shadow-glow: 0 0 20px rgba(59,130,246,0.04);
     --chart-bg: rgba(0,0,0,0);
-    --chart-grid: rgba(0,0,0,0.06);
-    --badge-clean-bg: rgba(16,185,129,0.1);
-    --badge-suspicious-bg: rgba(217,119,6,0.1);
-    --badge-honeypot-bg: rgba(239,68,68,0.1);
-    --score-bar-bg: rgba(0,0,0,0.08);
+    --chart-grid: rgba(0,0,0,0.04);
+    --badge-clean-bg: rgba(16,185,129,0.08);
+    --badge-suspicious-bg: rgba(217,119,6,0.08);
+    --badge-honeypot-bg: rgba(239,68,68,0.08);
+    --score-bar-bg: rgba(0,0,0,0.05);
+    --popover-bg: rgba(255,255,255,0.98);
+    --profile-section-bg: rgba(248,250,252,0.7);
 """
 
 # Inject theme variables
@@ -138,25 +156,48 @@ st.markdown(f"<style>:root {{{theme_vars}}}</style>", unsafe_allow_html=True)
 
 ENTERPRISE_CSS = f"""
 <style>
-    /* ── Font import must be first ── */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    /* ═══════════════════════════════════════════════════════════════════════
+       ENTERPRISE DESIGN SYSTEM v2.0
+       Design tokens, base styles, components, animations
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    /* ── Fonts ── */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar {{ width: 6px; height: 6px; }}
+    ::-webkit-scrollbar-track {{ background: transparent; }}
+    ::-webkit-scrollbar-thumb {{ background: var(--border-color); border-radius: 3px; }}
+    ::-webkit-scrollbar-thumb:hover {{ background: var(--text-dim); }}
 
     /* ── Base ── */
     .stApp {{ background: var(--bg-primary); }}
     .stApp > header {{ background: transparent !important; }}
     .stApp > header [data-testid="stDecoration"] {{ display: none; }}
+    * {{ -webkit-tap-highlight-color: transparent; }}
 
     /* ── Typography ── */
-    html, body, [class*="css"] {{ font-family: 'Inter', -apple-system, sans-serif; }}
-
-    /* ── Theme toggle icon ── */
-    .theme-toggle-icon {{
-        font-size: 1.1rem;
-        transition: transform 0.3s ease;
-        display: inline-block;
+    html, body, [class*="css"] {{
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }}
-    .theme-toggle-icon:hover {{
-        transform: rotate(30deg);
+
+    /* ── Theme Transition ── */
+    .stApp, .stMarkdown, div[data-testid="stVerticalBlock"] > div {{
+        transition: background 0.4s ease, color 0.4s ease;
+    }}
+
+    /* ── Theme toggle ── */
+    .theme-toggle {{
+        display: flex; align-items: center; gap: 0.5rem;
+    }}
+    .theme-toggle-btn {{
+        font-size: 1.1rem;
+        transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+        display: inline-flex; align-items: center; justify-content: center;
+        cursor: pointer;
+    }}
+    .theme-toggle-btn:hover {{
+        transform: rotate(30deg) scale(1.1);
     }}
 
     /* ── Responsive Container ── */
@@ -167,17 +208,34 @@ ENTERPRISE_CSS = f"""
         transition: padding 0.3s ease;
     }}
 
+    /* ── Selection ── */
+    ::selection {{
+        background: rgba(59, 130, 246, 0.3);
+        color: var(--text-primary);
+    }}
+
     /* ── Top Nav Bar ── */
     .nav-bar {{
         background: var(--gradient-nav);
         border-bottom: 1px solid var(--border-color);
-        padding: 0.8rem 1.5rem;
+        padding: 0.7rem 1.5rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
         margin: -1rem -1rem 1rem -1rem;
         gap: 0.5rem;
-        transition: padding 0.3s ease;
+        backdrop-filter: blur(12px);
+        position: relative;
+        z-index: 100;
+        transition: padding 0.3s ease, background 0.4s ease;
+    }}
+    .nav-bar::after {{
+        content: '';
+        position: absolute;
+        bottom: -1px; left: 10%; right: 10%;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
+        opacity: 0.3;
     }}
     .nav-brand {{
         display: flex;
@@ -187,88 +245,115 @@ ENTERPRISE_CSS = f"""
     }}
     .nav-logo {{
         flex-shrink: 0;
-        width: 36px; height: 36px;
+        width: 38px; height: 38px;
         background: var(--gradient-blue);
-        border-radius: 10px;
+        border-radius: 12px;
         display: flex; align-items: center; justify-content: center;
-        font-size: 1.2rem;
+        font-size: 1.3rem;
+        box-shadow: 0 4px 12px rgba(59,130,246,0.2);
     }}
     .nav-title {{
-        font-weight: 700;
+        font-weight: 800;
         font-size: clamp(0.9rem, 2.5vw, 1.2rem);
         color: var(--text-primary);
-        letter-spacing: -0.3px;
+        letter-spacing: -0.5px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }}
     .nav-subtitle {{
-        font-size: clamp(0.65rem, 1.5vw, 0.8rem);
+        font-size: clamp(0.6rem, 1.5vw, 0.78rem);
         color: var(--text-muted);
-        margin-top: -0.1rem;
+        margin-top: -0.15rem;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }}
     .nav-version {{
         flex-shrink: 0;
-        background: rgba(59,130,246,0.15);
+        background: rgba(59,130,246,0.12);
         color: var(--accent-blue-light);
-        padding: 0.2rem 0.6rem;
-        border-radius: 6px;
-        font-size: clamp(0.6rem, 1.2vw, 0.7rem);
+        padding: 0.25rem 0.7rem;
+        border-radius: 20px;
+        font-size: clamp(0.55rem, 1.2vw, 0.68rem);
         font-weight: 600;
         white-space: nowrap;
+        border: 1px solid rgba(59,130,246,0.1);
+        letter-spacing: 0.2px;
+    }}
+
+    /* ── Source Timestamp ── */
+    .source-time {{
+        color: var(--text-muted);
+        font-size: 0.78rem;
+        margin-bottom: 0.6rem;
+        padding: 0.25rem 0;
+    }}
+    .source-time .dot {{
+        color: var(--accent-blue);
+        opacity: 0.5;
     }}
 
     /* ── Enterprise Metric Cards ── */
     .metric-grid {{
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 0.6rem;
-        margin-bottom: 1.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+        gap: 0.65rem;
+        margin-bottom: 1.2rem;
     }}
     .metric-card {{
         background: var(--bg-card);
-        backdrop-filter: blur(8px);
+        backdrop-filter: blur(12px);
         border: 1px solid var(--border-card);
-        border-radius: 12px;
-        padding: clamp(0.8rem, 1.5vw, 1.2rem) clamp(0.7rem, 1.2vw, 1rem);
+        border-radius: 14px;
+        padding: clamp(0.7rem, 1.5vw, 1.1rem) clamp(0.6rem, 1.2vw, 0.9rem);
         position: relative;
         overflow: hidden;
-        transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
-        -webkit-tap-highlight-color: transparent;
+        transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+        animation: fadeSlideUp 0.5s ease-out both;
     }}
+    .metric-card:nth-child(1) {{ animation-delay: 0.02s; }}
+    .metric-card:nth-child(2) {{ animation-delay: 0.06s; }}
+    .metric-card:nth-child(3) {{ animation-delay: 0.10s; }}
+    .metric-card:nth-child(4) {{ animation-delay: 0.14s; }}
+    .metric-card:nth-child(5) {{ animation-delay: 0.18s; }}
+    .metric-card:nth-child(6) {{ animation-delay: 0.22s; }}
+    .metric-card:nth-child(7) {{ animation-delay: 0.26s; }}
     .metric-card:active {{
         transform: scale(0.97);
     }}
     @media (hover: hover) {{
         .metric-card:hover {{
             border-color: rgba(59,130,246,0.3);
-            transform: translateY(-2px);
+            transform: translateY(-3px);
             box-shadow: var(--shadow);
         }}
     }}
-    .metric-card .accent-line {{
+    .metric-card::before {{
+        content: '';
         position: absolute;
-        top: 0; left: 0; right: 0; height: 3px;
+        top: 0; left: 0; right: 0;
+        height: 3px;
         background: var(--gradient-blue);
+        opacity: 0.8;
     }}
     .metric-value {{
-        font-size: clamp(1.2rem, 3.5vw, 1.8rem);
+        font-size: clamp(1.15rem, 3.5vw, 1.7rem);
         font-weight: 800;
         color: var(--text-primary);
         letter-spacing: -0.5px;
-        line-height: 1.2;
+        line-height: 1.15;
+        font-family: 'JetBrains Mono', 'SF Mono', monospace;
     }}
     .metric-label {{
-        font-size: clamp(0.6rem, 1.5vw, 0.78rem);
+        font-size: clamp(0.6rem, 1.5vw, 0.75rem);
         color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 0.8px;
-        margin-top: 0.25rem;
+        margin-top: 0.2rem;
+        font-weight: 500;
     }}
-    .metric-trend {{ font-size: 0.7rem; margin-top: 0.3rem; }}
+    .metric-trend {{ font-size: 0.68rem; margin-top: 0.25rem; }}
     .metric-trend.up {{ color: var(--success); }}
     .metric-trend.down {{ color: var(--danger); }}
 
@@ -276,12 +361,11 @@ ENTERPRISE_CSS = f"""
     .rank-card {{
         background: var(--bg-card-hover);
         border: 1px solid var(--border-card);
-        border-radius: 10px;
-        padding: clamp(0.6rem, 1.2vw, 1rem) clamp(0.8rem, 1.5vw, 1.2rem);
+        border-radius: 12px;
+        padding: clamp(0.55rem, 1.2vw, 0.95rem) clamp(0.7rem, 1.5vw, 1.1rem);
         margin-bottom: 0.5rem;
-        transition: all 0.25s ease;
-        animation: slideIn 0.35s ease-out;
-        -webkit-tap-highlight-color: transparent;
+        transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+        animation: slideIn 0.4s ease-out both;
     }}
     .rank-card:active {{
         transform: scale(0.99);
@@ -290,32 +374,44 @@ ENTERPRISE_CSS = f"""
         .rank-card:hover {{
             border-color: var(--border-hover);
             background: var(--bg-card);
-            transform: translateX(3px);
+            transform: translateX(4px);
+            box-shadow: var(--shadow-sm);
         }}
     }}
 
     @keyframes slideIn {{
-        from {{ opacity: 0; transform: translateX(-10px); }}
+        from {{ opacity: 0; transform: translateX(-12px); }}
         to   {{ opacity: 1; transform: translateX(0); }}
+    }}
+
+    @keyframes fadeSlideUp {{
+        from {{ opacity: 0; transform: translateY(8px); }}
+        to   {{ opacity: 1; transform: translateY(0); }}
     }}
 
     .rank-number {{
         font-weight: 800;
-        font-size: clamp(0.9rem, 2vw, 1.2rem);
+        font-size: clamp(0.85rem, 2vw, 1.15rem);
         color: var(--accent-blue);
         min-width: clamp(1.8rem, 4vw, 2.5rem);
         flex-shrink: 0;
     }}
+    .rank-number.top-1 {{ color: #f59e0b; }}
+    .rank-number.top-2 {{ color: #94a3b8; }}
+    .rank-number.top-3 {{ color: #d97706; }}
+
     .candidate-name {{
         font-weight: 600;
         color: var(--text-secondary);
-        font-size: clamp(0.8rem, 1.5vw, 0.95rem);
+        font-size: clamp(0.78rem, 1.5vw, 0.92rem);
         word-break: break-word;
+        letter-spacing: -0.1px;
     }}
     .candidate-meta {{
         color: var(--text-muted);
-        font-size: clamp(0.65rem, 1.2vw, 0.8rem);
+        font-size: clamp(0.62rem, 1.2vw, 0.78rem);
         word-break: break-word;
+        line-height: 1.4;
     }}
     .score-text {{
         font-family: 'JetBrains Mono', 'SF Mono', monospace;
@@ -327,44 +423,74 @@ ENTERPRISE_CSS = f"""
     .badge {{
         display: inline-flex;
         align-items: center;
-        padding: 0.15rem 0.55rem;
-        border-radius: 6px;
-        font-size: clamp(0.6rem, 1.2vw, 0.7rem);
+        gap: 0.2rem;
+        padding: 0.18rem 0.6rem;
+        border-radius: 20px;
+        font-size: clamp(0.55rem, 1.2vw, 0.68rem);
         font-weight: 600;
         letter-spacing: 0.3px;
         white-space: nowrap;
+        border: 1px solid transparent;
+        transition: all 0.2s;
     }}
-    .badge-clean {{ background: var(--badge-clean-bg); color: var(--success); }}
-    .badge-suspicious {{ background: var(--badge-suspicious-bg); color: var(--warning); }}
-    .badge-honeypot {{ background: var(--badge-honeypot-bg); color: var(--danger); animation: pulse 2s infinite; }}
+    .badge-clean {{
+        background: var(--badge-clean-bg);
+        color: var(--success);
+        border-color: rgba(52,211,153,0.15);
+    }}
+    .badge-suspicious {{
+        background: var(--badge-suspicious-bg);
+        color: var(--warning);
+        border-color: rgba(251,191,36,0.15);
+    }}
+    .badge-honeypot {{
+        background: var(--badge-honeypot-bg);
+        color: var(--danger);
+        border-color: rgba(248,113,113,0.15);
+        animation: pulse 2s infinite;
+    }}
 
     @keyframes pulse {{
         0%, 100% {{ opacity: 1; }}
-        50% {{ opacity: 0.7; }}
+        50% {{ opacity: 0.65; }}
     }}
 
     /* ── Progress bar ── */
     .score-bar {{
-        height: 3px;
-        border-radius: 3px;
+        height: 4px;
+        border-radius: 4px;
         background: var(--score-bar-bg);
-        margin: 0.4rem 0 0.3rem 0;
+        margin: 0.4rem 0 0.2rem 0;
         overflow: hidden;
     }}
     .score-bar-fill {{
         height: 100%;
-        border-radius: 3px;
-        transition: width 1s ease;
+        border-radius: 4px;
+        transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
     }}
+
+    /* ── Section Headers ── */
+    .section-header {{
+        font-size: clamp(0.85rem, 1.5vw, 0.95rem);
+        font-weight: 700;
+        color: var(--text-secondary);
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.2px;
+    }}
+    .section-header .icon {{ margin-right: 0.3rem; }}
 
     /* ── Tab styling ── */
     .stTabs [data-baseweb="tab-list"] {{
-        gap: 0.25rem;
+        gap: 0;
         border-bottom: 1px solid var(--border-color);
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
         flex-wrap: nowrap;
+        padding: 0;
+    }}
+    .stTabs [data-baseweb="tab-list"]::before {{
+        display: none;
     }}
     .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {{ display: none; }}
     .stTabs [data-baseweb="tab"] {{
@@ -372,12 +498,22 @@ ENTERPRISE_CSS = f"""
         color: var(--text-muted) !important;
         font-weight: 500;
         font-size: clamp(0.7rem, 1.5vw, 0.85rem);
-        padding: clamp(0.4rem, 1vw, 0.5rem) clamp(0.5rem, 1.5vw, 1rem);
-        border-radius: 8px 8px 0 0;
-        transition: all 0.2s;
+        padding: clamp(0.45rem, 1vw, 0.6rem) clamp(0.6rem, 1.5vw, 1.2rem);
+        border-radius: 0;
+        transition: all 0.25s;
         white-space: nowrap;
         flex-shrink: 0;
-        -webkit-tap-highlight-color: transparent;
+        position: relative;
+    }}
+    .stTabs [data-baseweb="tab"]::after {{
+        content: '';
+        position: absolute;
+        bottom: 0; left: 50%; right: 50%;
+        height: 2px;
+        background: var(--gradient-blue);
+        transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+        border-radius: 2px 2px 0 0;
+        opacity: 0;
     }}
     @media (hover: hover) {{
         .stTabs [data-baseweb="tab"]:hover {{
@@ -387,55 +523,154 @@ ENTERPRISE_CSS = f"""
     }}
     .stTabs [aria-selected="true"] {{
         color: var(--accent-blue-light) !important;
-        border-bottom: 2px solid var(--accent-blue) !important;
+        font-weight: 600;
+    }}
+    .stTabs [aria-selected="true"]::after {{
+        left: 10%; right: 10%;
+        opacity: 1;
     }}
 
     /* ── Sidebar ── */
     section[data-testid="stSidebar"] {{
         background: var(--sidebar-bg);
         border-right: 1px solid var(--border-light);
+        backdrop-filter: blur(8px);
     }}
     section[data-testid="stSidebar"] .stButton button {{
-        border-radius: 8px;
+        border-radius: 10px;
         font-weight: 500;
-        font-size: clamp(0.75rem, 1.2vw, 0.85rem);
-        min-height: 44px;
-        -webkit-tap-highlight-color: transparent;
+        font-size: clamp(0.72rem, 1.2vw, 0.82rem);
+        min-height: 42px;
+        transition: all 0.25s;
     }}
     section[data-testid="stSidebar"] .stButton button[kind="primary"] {{
         background: var(--gradient-blue);
         color: white;
         border: none;
+        box-shadow: 0 4px 15px rgba(59,130,246,0.2);
+    }}
+    section[data-testid="stSidebar"] .stButton button[kind="primary"]:hover {{
+        box-shadow: 0 6px 20px rgba(59,130,246,0.3);
+        transform: translateY(-1px);
     }}
     section[data-testid="stSidebar"] .stButton button[kind="secondary"] {{
         background: rgba(128,128,128,0.05);
         color: var(--text-muted-dark);
         border: 1px solid var(--border-light);
     }}
+    section[data-testid="stSidebar"] .stButton button[kind="secondary"]:hover {{
+        border-color: var(--border-hover);
+        background: rgba(128,128,128,0.08);
+    }}
     .sidebar-title {{
         font-weight: 700;
-        font-size: clamp(0.75rem, 1.2vw, 0.85rem);
+        font-size: clamp(0.72rem, 1.2vw, 0.82rem);
         color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 1.2px;
-        margin-bottom: 0.75rem;
+        margin-bottom: 0.65rem;
     }}
 
     /* ── Dividers ── */
     .divider {{
         height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(59,130,246,0.15), transparent);
-        margin: 1.2rem 0;
+        background: linear-gradient(90deg, transparent, rgba(59,130,246,0.12), transparent);
+        margin: 1rem 0;
     }}
 
     /* ── Footer ── */
     .footer {{
         margin-top: 2rem;
-        padding: 1rem 0;
+        padding: 1.2rem 0;
         border-top: 1px solid var(--border-light);
         text-align: center;
         color: var(--text-dim);
-        font-size: clamp(0.6rem, 1.2vw, 0.75rem);
+        font-size: clamp(0.58rem, 1.2vw, 0.72rem);
+        letter-spacing: 0.2px;
+    }}
+
+    /* ── Streamlit component enhancements ── */
+    .stTextInput input {{
+        border-radius: 10px !important;
+        border: 1px solid var(--border-card) !important;
+        background: var(--bg-sample) !important;
+        color: var(--text-primary) !important;
+        font-size: 0.82rem !important;
+        padding: 0.5rem 0.75rem !important;
+        transition: all 0.3s;
+    }}
+    .stTextInput input:focus {{
+        border-color: var(--accent-blue) !important;
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.1) !important;
+    }}
+    .stSelectbox [data-baseweb="select"] > div {{
+        border-radius: 10px !important;
+        border-color: var(--border-card) !important;
+        background: var(--bg-sample) !important;
+    }}
+    .stSlider [data-baseweb="slider"] {{
+        font-size: 0.82rem !important;
+    }}
+    .stSlider [data-baseweb="slider"] .stSlider [role="slider"] {{
+        background: var(--accent-blue) !important;
+    }}
+    .stMultiSelect [data-baseweb="select"] > div {{
+        border-radius: 10px !important;
+        border-color: var(--border-card) !important;
+        background: var(--bg-sample) !important;
+    }}
+
+    /* ── Popover styling ── */
+    div[data-testid="stPopover"] button {
+        border-radius: 10px !important;
+        background: var(--bg-card) !important;
+        border: 1px solid var(--border-card) !important;
+        color: var(--text-primary) !important;
+        font-size: 0.85rem !important;
+        padding: 0.4rem 0.8rem !important;
+        transition: all 0.3s;
+    }
+    div[data-testid="stPopover"] button:hover {
+        border-color: var(--accent-blue) !important;
+        background: var(--bg-card-alt) !important;
+    }
+    div[data-testid="stPopover"] [data-testid="stPopoverBody"] {
+        background: var(--popover-bg) !important;
+        backdrop-filter: blur(16px);
+        border: 1px solid var(--border-color) !important;
+        border-radius: 14px !important;
+        box-shadow: var(--shadow-lg) !important;
+        padding: 0.8rem !important;
+    }
+
+    /* ── Toast notifications ── */
+    div[data-testid="stToast"] {{
+        background: var(--bg-card) !important;
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--border-card) !important;
+        border-radius: 12px !important;
+        box-shadow: var(--shadow) !important;
+    }}
+
+    /* ── Progress bar (Streamlit) ── */
+    .stProgress .st-bo {{
+        background: var(--score-bar-bg) !important;
+    }}
+    .stProgress .st-bq {{
+        background: var(--gradient-blue) !important;
+    }}
+
+    /* ── Expander ── */
+    .stExpander {{
+        border: 1px solid var(--border-card) !important;
+        border-radius: 12px !important;
+        background: var(--bg-card-hover) !important;
+        overflow: hidden;
+    }}
+    .stExpander summary {{
+        padding: 0.5rem 0.8rem !important;
+        font-weight: 600 !important;
+        color: var(--text-secondary) !important;
     }}
 
     /* ── Plotly chart responsiveness ── */
@@ -444,18 +679,28 @@ ENTERPRISE_CSS = f"""
         max-width: 100% !important;
     }}
 
-    /* ── File uploader responsiveness ── */
+    /* ── File uploader ── */
     .stFileUploader [data-testid="stFileUploadDropzone"] {{
         padding: clamp(0.5rem, 2vw, 1rem) !important;
         min-height: 44px;
+        border-radius: 12px !important;
+        border: 1px dashed var(--border-card) !important;
+        transition: all 0.3s;
+    }}
+    .stFileUploader [data-testid="stFileUploadDropzone"]:hover {{
+        border-color: var(--accent-blue) !important;
+        background: rgba(59,130,246,0.03) !important;
     }}
     .stFileUploader [data-testid="stFileUploadDropzone"] small {{
         font-size: clamp(0.6rem, 1.2vw, 0.75rem) !important;
     }}
 
-    /* ── Text input / slider responsiveness ── */
-    .stTextInput input, .stSlider [data-baseweb="slider"] {{
-        font-size: clamp(0.75rem, 1.2vw, 0.85rem) !important;
+    /* ── Selectbox dropdown ── */
+    [data-baseweb="select"] [data-baseweb="popover"] {{
+        background: var(--popover-bg) !important;
+        backdrop-filter: blur(16px);
+        border: 1px solid var(--border-color) !important;
+        border-radius: 12px !important;
     }}
 
     /* ── Column stacking on narrow screens ── */
@@ -477,7 +722,7 @@ ENTERPRISE_CSS = f"""
             padding-right: 1rem !important;
         }}
         .nav-bar {{
-            padding: 0.6rem 1rem;
+            padding: 0.55rem 1rem;
             margin: -1rem -1rem 0.8rem -1rem;
         }}
         .metric-grid {{
@@ -493,7 +738,7 @@ ENTERPRISE_CSS = f"""
             padding-right: 0.75rem !important;
         }}
         .nav-bar {{
-            padding: 0.5rem 0.75rem;
+            padding: 0.45rem 0.75rem;
             margin: -1rem -1rem 0.6rem -1rem;
             flex-wrap: wrap;
             gap: 0.3rem;
@@ -503,7 +748,7 @@ ENTERPRISE_CSS = f"""
             grid-template-columns: repeat(2, 1fr);
             gap: 0.4rem;
         }}
-        .metric-card {{ padding: 0.7rem 0.6rem; }}
+        .metric-card {{ padding: 0.65rem 0.55rem; }}
         .rank-card > div:first-child {{ gap: 0.5rem !important; }}
     }}
 
@@ -514,7 +759,7 @@ ENTERPRISE_CSS = f"""
             padding-right: 0.5rem !important;
         }}
         .nav-bar {{
-            padding: 0.4rem 0.5rem;
+            padding: 0.35rem 0.5rem;
             margin: -1rem -1rem 0.5rem -1rem;
             flex-wrap: wrap;
         }}
@@ -524,14 +769,14 @@ ENTERPRISE_CSS = f"""
             grid-template-columns: repeat(2, 1fr);
             gap: 0.35rem;
         }}
-        .metric-card {{ padding: 0.6rem 0.5rem; border-radius: 8px; }}
-        .metric-card .accent-line {{ height: 2px; }}
-        .rank-card {{ padding: 0.5rem 0.6rem; border-radius: 8px; }}
+        .metric-card {{ padding: 0.55rem 0.45rem; border-radius: 10px; }}
+        .metric-card::before {{ height: 2px; }}
+        .rank-card {{ padding: 0.45rem 0.55rem; border-radius: 10px; }}
         .rank-card > div:first-child {{ flex-wrap: wrap; gap: 0.3rem !important; }}
-        .rank-number {{ min-width: 1.5rem; }}
-        .stTabs [data-baseweb="tab"] {{ font-size: 0.7rem; padding: 0.3rem 0.5rem; }}
+        .rank-number {{ min-width: 1.3rem; }}
+        .stTabs [data-baseweb="tab"] {{ font-size: 0.68rem; padding: 0.3rem 0.5rem; }}
         .nav-version {{ display: none; }}
-        .footer {{ font-size: 0.55rem; padding: 0.5rem 0; }}
+        .footer {{ font-size: 0.52rem; padding: 0.5rem 0; }}
     }}
 
     /* ── Large screens: > 1440px ── */
@@ -542,7 +787,7 @@ ENTERPRISE_CSS = f"""
             padding-left: 2rem !important;
             padding-right: 2rem !important;
         }}
-        .nav-bar {{ padding: 0.8rem 2rem; }}
+        .nav-bar {{ padding: 0.7rem 2rem; }}
         .metric-grid {{
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 1rem;
@@ -575,7 +820,11 @@ st.markdown("""
             <div class="nav-subtitle">Intelligent Candidate Discovery &bull; Enterprise Edition</div>
         </div>
     </div>
-    <div class="nav-version">v2.0 &bull; 11 honeypot checks</div>
+    <div style="display:flex;align-items:center;gap:0.6rem;">
+        <div class="nav-version">v2.0</div>
+        <div style="width:1px;height:14px;background:var(--border-color);"></div>
+        <div style="color:var(--text-dim);font-size:clamp(0.5rem,1vw,0.65rem);font-weight:500;">11 checks</div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -705,8 +954,7 @@ def make_metric_card(value, label, accent_color=None, trend=None):
         trend_html = f'<div class="metric-trend {cls}">{arrow} {abs(trend)}%</div>'
     return f"""
     <div class="metric-card">
-        <div class="accent-line" style="background:linear-gradient(90deg, {accent}, var(--accent-purple));"></div>
-        <div class="metric-value">{value}</div>
+        <div class="metric-value" style="background:linear-gradient(135deg, {accent}, var(--accent-purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">{value}</div>
         <div class="metric-label">{label}</div>
         {trend_html}
     </div>
@@ -715,10 +963,10 @@ def make_metric_card(value, label, accent_color=None, trend=None):
 
 def badge_html(penalty):
     if penalty < 0.3:
-        return '<span class="badge badge-honeypot">HONEYPOT</span>'
+        return '<span class="badge badge-honeypot">\u26A0 HONEYPOT</span>'
     elif penalty < 0.8:
-        return '<span class="badge badge-suspicious">SUSPICIOUS</span>'
-    return '<span class="badge badge-clean">VERIFIED</span>'
+        return '<span class="badge badge-suspicious">\u26A0 SUSPICIOUS</span>'
+    return '<span class="badge badge-clean">\u2713 VERIFIED</span>'
 
 
 def _render_rank_card(rank, score, cid, reasoning, penalty, issues, large_style=False):
@@ -738,11 +986,23 @@ def _render_rank_card(rank, score, cid, reasoning, penalty, issues, large_style=
         issues_html = f'<div style="color:{P["danger"]};font-size:0.75rem;margin-top:0.2rem;">\u26A0 {safe_issues}</div>'
 
     delay_style = f'style="animation-delay:{delay}s"' if not large_style else ""
+    rank_cls = ""
+    if rank <= 3:
+        rank_cls = f" top-{rank}"
+
+    # Emoji for top ranks
+    rank_emoji = ""
+    if rank == 1:
+        rank_emoji = "\U0001F947"
+    elif rank == 2:
+        rank_emoji = "\U0001F948"
+    elif rank == 3:
+        rank_emoji = "\U0001F949"
 
     return (
         f'<div class="rank-card" {delay_style}>'
         f'<div style="display:flex;align-items:center;gap:0.8rem;">'
-        f'<div class="rank-number" style="min-width:2rem;">#{rank}</div>'
+        f'<div class="rank-number{rank_cls}" style="min-width:2rem;">{rank_emoji}#{rank}</div>'
         f'<div style="flex:1;">'
         f'<div class="candidate-name">{safe_cid}</div>'
         f'<div class="candidate-meta">{safe_reasoning}</div>'
@@ -1414,30 +1674,37 @@ else:
     with col_intro:
         st.markdown(f"""
         <div style="background:linear-gradient(135deg,var(--bg-welcome),var(--bg-card-alt));
-                    border:1px solid var(--border-card);border-radius:14px;padding:2rem;">
-            <h3 style="color:var(--text-primary);margin:0 0 0.5rem 0;font-size:1.3rem;">
+                    border:1px solid var(--border-card);border-radius:16px;padding:2rem;
+                    position:relative;overflow:hidden;">
+            <div style="position:absolute;top:-50px;right:-50px;width:150px;height:150px;
+                        background:radial-gradient(circle,rgba(59,130,246,0.08),transparent);
+                        border-radius:50%;"></div>
+            <h3 style="color:var(--text-primary);margin:0 0 0.5rem 0;font-size:1.4rem;font-weight:800;letter-spacing:-0.5px;">
                 \U0001F44B Welcome to Candidate Ranker
             </h3>
-            <p style="color:var(--text-muted-dark);font-size:0.95rem;line-height:1.6;">
-            Enterprise-grade candidate ranking for <strong style="color:var(--text-primary);">Senior AI Engineer</strong>
+            <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.7;max-width:500px;">
+            Enterprise-grade candidate ranking for <strong style="color:var(--text-secondary);font-weight:600;">Senior AI Engineer</strong>
             roles. Upload your candidate data in <strong>JSON</strong>, <strong>CSV</strong>, or
             <strong>Excel</strong> format and get instant AI-powered rankings.
             </p>
             <div style="display:flex;gap:0.8rem;flex-wrap:wrap;margin-top:1.5rem;">
-                <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.15);
-                            border-radius:8px;padding:0.6rem 1rem;text-align:center;flex:1;min-width:100px;">
-                    <div style="font-size:1.3rem;">\U0001F4E5</div>
-                    <div style="color:var(--text-muted);font-size:0.7rem;margin-top:0.2rem;">Upload</div>
+                <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.12);
+                            border-radius:10px;padding:0.7rem 1rem;text-align:center;flex:1;min-width:100px;
+                            transition:all 0.3s;">
+                    <div style="font-size:1.4rem;margin-bottom:0.15rem;">\U0001F4E5</div>
+                    <div style="color:var(--text-muted);font-size:0.7rem;font-weight:500;">Upload</div>
                 </div>
-                <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.15);
-                            border-radius:8px;padding:0.6rem 1rem;text-align:center;flex:1;min-width:100px;">
-                    <div style="font-size:1.3rem;">\U0001F4CA</div>
-                    <div style="color:var(--text-muted);font-size:0.7rem;margin-top:0.2rem;">Analyze</div>
+                <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.12);
+                            border-radius:10px;padding:0.7rem 1rem;text-align:center;flex:1;min-width:100px;
+                            transition:all 0.3s;">
+                    <div style="font-size:1.4rem;margin-bottom:0.15rem;">\U0001F4CA</div>
+                    <div style="color:var(--text-muted);font-size:0.7rem;font-weight:500;">Analyze</div>
                 </div>
-                <div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.15);
-                            border-radius:8px;padding:0.6rem 1rem;text-align:center;flex:1;min-width:100px;">
-                    <div style="font-size:1.3rem;">\U0001F3C5</div>
-                    <div style="color:var(--text-muted);font-size:0.7rem;margin-top:0.2rem;">Rank</div>
+                <div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.12);
+                            border-radius:10px;padding:0.7rem 1rem;text-align:center;flex:1;min-width:100px;
+                            transition:all 0.3s;">
+                    <div style="font-size:1.4rem;margin-bottom:0.15rem;">\U0001F3C5</div>
+                    <div style="color:var(--text-muted);font-size:0.7rem;font-weight:500;">Rank</div>
                 </div>
             </div>
         </div>
