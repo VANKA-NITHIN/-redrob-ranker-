@@ -1524,7 +1524,7 @@ if "rankings" in st.session_state:
                     rank = global_start_rank + offset
                     card = _render_rank_card(rank, score, cid, reasoning, penalty, issues, large_style=False)
                     # Bookmark toggle — star sits to the right of each rank card
-                    bm_cols = st.columns([1, '50px'])
+                    bm_cols = st.columns([0.85, 0.15])
                     with bm_cols[0]:
                         st.markdown(card, unsafe_allow_html=True)
                     with bm_cols[1]:
