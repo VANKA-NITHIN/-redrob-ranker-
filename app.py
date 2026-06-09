@@ -24,7 +24,6 @@ st.set_page_config(
 )
 
 # ── Enterprise Theme ─────────────────────────────────────────────────────────
-
 ENTERPRISE_CSS = """
 <style>
     /* ── Base ── */
@@ -36,22 +35,34 @@ ENTERPRISE_CSS = """
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     html, body, [class*="css"] { font-family: 'Inter', -apple-system, sans-serif; }
 
+    /* ── Responsive Container ── */
+    .main > .block-container {
+        max-width: 100%;
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+        transition: padding 0.3s ease;
+    }
+
     /* ── Top Nav Bar ── */
     .nav-bar {
         background: linear-gradient(135deg, #0f1629 0%, #1a1f3a 100%);
         border-bottom: 1px solid rgba(255,255,255,0.06);
-        padding: 0.8rem 2rem;
+        padding: 0.8rem 1.5rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
         margin: -1rem -1rem 1rem -1rem;
+        gap: 0.5rem;
+        transition: padding 0.3s ease;
     }
     .nav-brand {
         display: flex;
         align-items: center;
         gap: 0.75rem;
+        min-width: 0;
     }
     .nav-logo {
+        flex-shrink: 0;
         width: 36px; height: 36px;
         background: linear-gradient(135deg, #3b82f6, #8b5cf6);
         border-radius: 10px;
@@ -60,44 +71,58 @@ ENTERPRISE_CSS = """
     }
     .nav-title {
         font-weight: 700;
-        font-size: 1.2rem;
+        font-size: clamp(0.9rem, 2.5vw, 1.2rem);
         color: #f1f5f9;
         letter-spacing: -0.3px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .nav-subtitle {
-        font-size: 0.8rem;
+        font-size: clamp(0.65rem, 1.5vw, 0.8rem);
         color: #64748b;
         margin-top: -0.1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .nav-version {
+        flex-shrink: 0;
         background: rgba(59,130,246,0.15);
         color: #60a5fa;
         padding: 0.2rem 0.6rem;
         border-radius: 6px;
-        font-size: 0.7rem;
+        font-size: clamp(0.6rem, 1.2vw, 0.7rem);
         font-weight: 600;
+        white-space: nowrap;
     }
 
     /* ── Enterprise Metric Cards ── */
     .metric-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-        gap: 0.75rem;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.6rem;
         margin-bottom: 1.5rem;
     }
     .metric-card {
         background: linear-gradient(135deg, rgba(30,41,59,0.8), rgba(15,23,42,0.8));
         border: 1px solid rgba(255,255,255,0.06);
         border-radius: 12px;
-        padding: 1.2rem 1rem;
+        padding: clamp(0.8rem, 1.5vw, 1.2rem) clamp(0.7rem, 1.2vw, 1rem);
         position: relative;
         overflow: hidden;
         transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+        -webkit-tap-highlight-color: transparent;
     }
-    .metric-card:hover {
-        border-color: rgba(59,130,246,0.3);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(59,130,246,0.08);
+    .metric-card:active {
+        transform: scale(0.97);
+    }
+    @media (hover: hover) {
+        .metric-card:hover {
+            border-color: rgba(59,130,246,0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59,130,246,0.08);
+        }
     }
     .metric-card .accent-line {
         position: absolute;
@@ -105,14 +130,14 @@ ENTERPRISE_CSS = """
         background: linear-gradient(90deg, #3b82f6, #8b5cf6);
     }
     .metric-value {
-        font-size: 1.8rem;
+        font-size: clamp(1.2rem, 3.5vw, 1.8rem);
         font-weight: 800;
         color: #f1f5f9;
         letter-spacing: -0.5px;
         line-height: 1.2;
     }
     .metric-label {
-        font-size: 0.78rem;
+        font-size: clamp(0.6rem, 1.5vw, 0.78rem);
         color: #64748b;
         text-transform: uppercase;
         letter-spacing: 0.8px;
@@ -130,15 +155,21 @@ ENTERPRISE_CSS = """
         background: linear-gradient(135deg, rgba(30,41,59,0.6), rgba(15,23,42,0.6));
         border: 1px solid rgba(255,255,255,0.05);
         border-radius: 10px;
-        padding: 1rem 1.2rem;
-        margin-bottom: 0.6rem;
+        padding: clamp(0.6rem, 1.2vw, 1rem) clamp(0.8rem, 1.5vw, 1.2rem);
+        margin-bottom: 0.5rem;
         transition: all 0.25s ease;
         animation: slideIn 0.35s ease-out;
+        -webkit-tap-highlight-color: transparent;
     }
-    .rank-card:hover {
-        border-color: rgba(59,130,246,0.2);
-        background: rgba(30,41,59,0.8);
-        transform: translateX(3px);
+    .rank-card:active {
+        transform: scale(0.99);
+    }
+    @media (hover: hover) {
+        .rank-card:hover {
+            border-color: rgba(59,130,246,0.2);
+            background: rgba(30,41,59,0.8);
+            transform: translateX(3px);
+        }
     }
 
     @keyframes slideIn {
@@ -148,22 +179,26 @@ ENTERPRISE_CSS = """
 
     .rank-number {
         font-weight: 800;
-        font-size: 1.2rem;
+        font-size: clamp(0.9rem, 2vw, 1.2rem);
         color: #3b82f6;
-        min-width: 2.5rem;
+        min-width: clamp(1.8rem, 4vw, 2.5rem);
+        flex-shrink: 0;
     }
     .candidate-name {
         font-weight: 600;
         color: #e2e8f0;
-        font-size: 0.95rem;
+        font-size: clamp(0.8rem, 1.5vw, 0.95rem);
+        word-break: break-word;
     }
     .candidate-meta {
         color: #64748b;
-        font-size: 0.8rem;
+        font-size: clamp(0.65rem, 1.2vw, 0.8rem);
+        word-break: break-word;
     }
     .score-text {
         font-family: 'JetBrains Mono', 'SF Mono', monospace;
         font-weight: 600;
+        white-space: nowrap;
     }
 
     /* ── Badges ── */
@@ -172,9 +207,10 @@ ENTERPRISE_CSS = """
         align-items: center;
         padding: 0.15rem 0.55rem;
         border-radius: 6px;
-        font-size: 0.7rem;
+        font-size: clamp(0.6rem, 1.2vw, 0.7rem);
         font-weight: 600;
         letter-spacing: 0.3px;
+        white-space: nowrap;
     }
     .badge-clean { background: rgba(52,211,153,0.12); color: #34d399; }
     .badge-suspicious { background: rgba(251,191,36,0.12); color: #fbbf24; }
@@ -201,21 +237,31 @@ ENTERPRISE_CSS = """
 
     /* ── Tab styling ── */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 0.5rem;
+        gap: 0.25rem;
         border-bottom: 1px solid rgba(255,255,255,0.06);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        flex-wrap: nowrap;
     }
+    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar { display: none; }
     .stTabs [data-baseweb="tab"] {
         background: transparent !important;
         color: #64748b !important;
         font-weight: 500;
-        font-size: 0.85rem;
-        padding: 0.5rem 1rem;
+        font-size: clamp(0.7rem, 1.5vw, 0.85rem);
+        padding: clamp(0.4rem, 1vw, 0.5rem) clamp(0.5rem, 1.5vw, 1rem);
         border-radius: 8px 8px 0 0;
         transition: all 0.2s;
+        white-space: nowrap;
+        flex-shrink: 0;
+        -webkit-tap-highlight-color: transparent;
     }
-    .stTabs [data-baseweb="tab"]:hover {
-        color: #e2e8f0 !important;
-        background: rgba(255,255,255,0.03) !important;
+    @media (hover: hover) {
+        .stTabs [data-baseweb="tab"]:hover {
+            color: #e2e8f0 !important;
+            background: rgba(255,255,255,0.03) !important;
+        }
     }
     .stTabs [aria-selected="true"] {
         color: #60a5fa !important;
@@ -230,7 +276,9 @@ ENTERPRISE_CSS = """
     section[data-testid="stSidebar"] .stButton button {
         border-radius: 8px;
         font-weight: 500;
-        font-size: 0.85rem;
+        font-size: clamp(0.75rem, 1.2vw, 0.85rem);
+        min-height: 44px;
+        -webkit-tap-highlight-color: transparent;
     }
     section[data-testid="stSidebar"] .stButton button[kind="primary"] {
         background: linear-gradient(135deg, #3b82f6, #2563eb);
@@ -244,7 +292,7 @@ ENTERPRISE_CSS = """
     }
     .sidebar-title {
         font-weight: 700;
-        font-size: 0.85rem;
+        font-size: clamp(0.75rem, 1.2vw, 0.85rem);
         color: #64748b;
         text-transform: uppercase;
         letter-spacing: 1.2px;
@@ -265,10 +313,175 @@ ENTERPRISE_CSS = """
         border-top: 1px solid rgba(255,255,255,0.04);
         text-align: center;
         color: #334155;
-        font-size: 0.75rem;
+        font-size: clamp(0.6rem, 1.2vw, 0.75rem);
     }
-</style>
-"""
+
+    /* ── Plotly chart responsiveness ── */
+    .stPlotlyChart, .js-plotly-plot, .plot-container {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* ── File uploader responsiveness ── */
+    .stFileUploader [data-testid="stFileUploadDropzone"] {
+        padding: clamp(0.5rem, 2vw, 1rem) !important;
+        min-height: 44px;
+    }
+    .stFileUploader [data-testid="stFileUploadDropzone"] small {
+        font-size: clamp(0.6rem, 1.2vw, 0.75rem) !important;
+    }
+
+    /* ── Text input / slider responsiveness ── */
+    .stTextInput input, .stSlider [data-baseweb="slider"] {
+        font-size: clamp(0.75rem, 1.2vw, 0.85rem) !important;
+    }
+
+    /* ── Welcome section improvements ── */
+    .welcome-card {
+        padding: clamp(1rem, 3vw, 2rem) !important;
+    }
+
+    /* ── Streamlit column stacking on narrow screens ── */
+    @media (max-width: 640px) {
+        .row-widget.stColumns {
+            flex-direction: column !important;
+        }
+        .row-widget.stColumns > div {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+            min-width: 0 !important;
+        }
+    }
+
+    /* ── Tablet: 641px - 1024px ── */
+    @media (min-width: 641px) and (max-width: 1024px) {
+        .main > .block-container {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        .nav-bar {
+            padding: 0.6rem 1rem;
+            margin: -1rem -1rem 0.8rem -1rem;
+        }
+        .metric-grid {
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 0.5rem;
+        }
+    }
+
+    /* ── Mobile landscape: 481px - 640px ── */
+    @media (min-width: 481px) and (max-width: 640px) {
+        .main > .block-container {
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+        }
+        .nav-bar {
+            padding: 0.5rem 0.75rem;
+            margin: -1rem -1rem 0.6rem -1rem;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+        }
+        .nav-subtitle {
+            display: none;
+        }
+        .metric-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.4rem;
+        }
+        .metric-card {
+            padding: 0.7rem 0.6rem;
+        }
+        .rank-card > div:first-child {
+            gap: 0.5rem !important;
+        }
+    }
+
+    /* ── Mobile portrait: <= 480px ── */
+    @media (max-width: 480px) {
+        .main > .block-container {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+        .nav-bar {
+            padding: 0.4rem 0.5rem;
+            margin: -1rem -1rem 0.5rem -1rem;
+            flex-wrap: wrap;
+        }
+        .nav-logo {
+            width: 28px; height: 28px;
+            font-size: 0.9rem;
+        }
+        .nav-subtitle {
+            display: none;
+        }
+        .nav-version {
+            font-size: 0.55rem;
+            padding: 0.15rem 0.4rem;
+        }
+        .metric-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.35rem;
+        }
+        .metric-card {
+            padding: 0.6rem 0.5rem;
+            border-radius: 8px;
+        }
+        .metric-card .accent-line {
+            height: 2px;
+        }
+        .rank-card {
+            padding: 0.5rem 0.6rem;
+            border-radius: 8px;
+        }
+        .rank-card > div:first-child {
+            flex-wrap: wrap;
+            gap: 0.3rem !important;
+        }
+        .rank-number {
+            min-width: 1.5rem;
+        }
+        .stTabs [data-baseweb="tab"] {
+            font-size: 0.7rem;
+            padding: 0.3rem 0.5rem;
+        }
+        section[data-testid="stSidebar"] {
+            width: 100% !important;
+        }
+        .footer {
+            font-size: 0.55rem;
+            padding: 0.5rem 0;
+        }
+    }
+
+    /* ── Large screens: > 1440px ── */
+    @media (min-width: 1441px) {
+        .main > .block-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding-left: 2rem !important;
+            padding-right: 2rem !important;
+        }
+        .nav-bar {
+            padding: 0.8rem 2rem;
+        }
+        .metric-grid {
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+    }
+
+    /* ── Ultra-wide: > 1900px ── */
+    @media (min-width: 1901px) {
+        .main > .block-container {
+            max-width: 1800px;
+            padding-left: 3rem !important;
+            padding-right: 3rem !important;
+        }
+        .metric-grid {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+    }
+</style>"""
 
 st.markdown(ENTERPRISE_CSS, unsafe_allow_html=True)
 
