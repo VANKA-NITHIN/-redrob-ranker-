@@ -1640,14 +1640,108 @@ if "rankings" in st.session_state:
             c1 = find_candidate_by_cid(compare_cids[0])
             c2 = find_candidate_by_cid(compare_cids[1])
             if c1 and c2:
+                # Find rank info for both candidates
+                c1_rank_info = None
+                c2_rank_info = None
+                for rk, (sc, cid2, reas, pen, iss) in enumerate(rankings, 1):
+                    if cid2 == compare_cids[0]:
+                        c1_rank_info = (rk, sc, reas, pen, iss)
+                    if cid2 == compare_cids[1]:
+                        c2_rank_info = (rk, sc, reas, pen, iss)
+
                 st.markdown(
-                    f'<div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.5rem;">'
+                    f'<div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.8rem;">'
                     f'<span style="color:var(--accent-blue);font-weight:600;font-size:0.85rem;">'
-                    f'Comparing: {compare_cids[0]} vs {compare_cids[1]}</span>'
+                    f'\U0001F504 Comparing: {compare_cids[0]} vs {compare_cids[1]}</span>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
 
+                # Score comparison table
+                if c1_rank_info and c2_rank_info:
+                    r1, s1, re1, p1, i1 = c1_rank_info
+                    r2, s2, re2, p2, i2 = c2_rank_info
+                    diff_score = s1 - s2
+                    diff_penalty = p1 - p2
+                    diff_rank = r2 - r1  # positive means c1 ranks higher
+
+                    def badge_name(p):
+                        return "HONEYPOT" if p < 0.3 else ("SUSPICIOUS" if p < 0.8 else "VERIFIED")
+
+                    def badge_color(p):
+                        return "var(--danger)" if p < 0.3 else ("var(--warning)" if p < 0.8 else "var(--success)")
+
+                    def _delta_html(val, better, worse):
+                        """Return HTML span showing delta with colored arrow."""
+                        if val == 0:
+                            return '<span style="color:var(--text-dim);font-size:0.75rem;">\u2014 Equal</span>'
+                        arrow = "\u25B2" if val > 0 else "\u25BC"
+                        color = better if val > 0 else worse
+                        return f'<span style="color:{color};font-size:0.75rem;">{arrow} {abs(val):.4f}</span>'
+
+                    st.markdown(f"""
+                    <div style="background:var(--bg-card-alt);border:1px solid var(--border-card);
+                                border-radius:12px;padding:0.8rem 1rem;margin-bottom:1rem;
+                                overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                            <thead>
+                                <tr style="border-bottom:1px solid var(--border-color);">
+                                    <th style="padding:0.4rem 0.6rem;text-align:left;color:var(--text-muted);font-weight:500;">Metric</th>
+                                    <th style="padding:0.4rem 0.6rem;text-align:center;color:var(--accent-blue);font-weight:600;">{compare_cids[0]}</th>
+                                    <th style="padding:0.4rem 0.6rem;text-align:center;color:var(--accent-purple);font-weight:600;">{compare_cids[1]}</th>
+                                    <th style="padding:0.4rem 0.6rem;text-align:center;color:var(--text-muted);font-weight:500;">\u0394 Difference</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom:1px solid var(--border-light);">
+                                    <td style="padding:0.4rem 0.6rem;color:var(--text-secondary);font-weight:500;">\U0001F3C5 Rank</td>
+                                    <td style="padding:0.4rem 0.6rem;text-align:center;font-family:'JetBrains Mono',monospace;color:var(--text-primary);font-weight:600;">#{r1}</td>
+                                    <td style="padding:0.4rem 0.6rem;text-align:center;font-family:'JetBrains Mono',monospace;color:var(--text-primary);font-weight:600;">#{r2}</td>
+                                    <td style="padding:0.4rem 0.6rem;text-align:center;">{_delta_html(diff_rank, 'var(--success)', 'var(--danger)')}</td>
+                                </tr>
+                                <tr style="border-bottom:1px solid var(--border-light);">
+                                    <td style="padding:0.4rem 0.6rem;color:var(--text-secondary);font-weight:500;">\U0001F4AF Score</td>
+                                    <td style="padding:0.4rem 0.6rem;text-align:center;font-family:'JetBrains Mono',monospace;color:{badge_color(p1)};font-weight:600;">{s1:.4f}</td>
+                                    <td style="padding:0.4rem 0.6rem;text-align:center;font-family:'JetBrains Mono',monospace;color:{badge_color(p2)};font-weight:600;">{s2:.4f}</td>
+                                    <td style="padding:0.4rem 0.6rem;text-align:center;">{_delta_html(diff_score, 'var(--success)', 'var(--danger)')}</td>
+                                </tr>
+                                <tr style="border-bottom:1px solid var(--border-light);">
+                                    <td style="padding:0.4rem 0.6rem;color:var(--text-secondary);font-weight:500;">\u26A0 Penalty</td>
+                                    <td style="padding:0.4rem 0.6rem;text-align:center;font-family:'JetBrains Mono',monospace;color:{badge_color(p1)};font-weight:600;">{p1:.4f}</td>
+                                    <td style="padding:0.4rem 0.6rem;text-align:center;font-family:'JetBrains Mono',monospace;color:{badge_color(p2)};font-weight:600;">{p2:.4f}</td>
+                                    <td style="padding:0.4rem 0.6rem;text-align:center;">{_delta_html(diff_penalty, 'var(--danger)', 'var(--success)')}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:0.4rem 0.6rem;color:var(--text-secondary);font-weight:500;">\U0001F514 Badge</td>
+                                    <td style="padding:0.4rem 0.6rem;text-align:center;">{badge_html(p1)}</td>
+                                    <td style="padding:0.4rem 0.6rem;text-align:center;">{badge_html(p2)}</td>
+                                    <td style="padding:0.4rem 0.6rem;text-align:center;color:var(--text-muted);font-size:0.75rem;">{"Same" if badge_name(p1) == badge_name(p2) else "Different"}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    # Score bars for visual comparison
+                    bar_cols = st.columns([1, 1])
+                    with bar_cols[0]:
+                        pct1 = min(s1 * 100, 100)
+                        st.markdown(
+                            f'<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:0.15rem;">'
+                            f'{compare_cids[0]} Score</div>'
+                            f'<div class="score-bar"><div class="score-bar-fill" style="width:{pct1:.1f}%;background:{badge_color(p1)};"></div></div>',
+                            unsafe_allow_html=True,
+                        )
+                    with bar_cols[1]:
+                        pct2 = min(s2 * 100, 100)
+                        st.markdown(
+                            f'<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:0.15rem;">'
+                            f'{compare_cids[1]} Score</div>'
+                            f'<div class="score-bar"><div class="score-bar-fill" style="width:{pct2:.1f}%;background:{badge_color(p2)};"></div></div>',
+                            unsafe_allow_html=True,
+                        )
+
+                # Side-by-side profiles
                 comp_col1, comp_col2 = st.columns(2)
 
                 with comp_col1:
