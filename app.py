@@ -8,6 +8,7 @@ import sys
 import time
 from collections import Counter
 
+import io
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -1259,6 +1260,51 @@ with st.sidebar:
                 unsafe_allow_html=True
             )
             st.progress(weight)
+
+        # ── Export ──
+        st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="sidebar-title">\U0001F4E5 Export</div>', unsafe_allow_html=True)
+
+        # Build export data
+        export_rows = []
+        for rank, (score, cid, reasoning, penalty, issues) in enumerate(rankings, 1):
+            badge = "HONEYPOT" if penalty < 0.3 else ("SUSPICIOUS" if penalty < 0.8 else "VERIFIED")
+            export_rows.append({
+                "Rank": rank,
+                "Candidate ID": cid,
+                "Score": round(score, 4),
+                "Penalty": round(penalty, 4),
+                "Badge": badge,
+                "Reasoning": reasoning,
+                "Issues": "; ".join(issues) if issues else "",
+            })
+
+        df_export = pd.DataFrame(export_rows)
+
+        # CSV export
+        csv_buffer = io.StringIO()
+        df_export.to_csv(csv_buffer, index=False)
+        csv_data = csv_buffer.getvalue()
+
+        st.download_button(
+            label="\U0001F4C4 Download CSV",
+            data=csv_data,
+            file_name=f"rankings_{time.strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            key="export_csv",
+        )
+
+        # JSON export
+        json_data = json.dumps(export_rows, indent=2, ensure_ascii=False)
+        st.download_button(
+            label="\U0001F4CB Download JSON",
+            data=json_data,
+            file_name=f"rankings_{time.strftime('%Y%m%d_%H%M%S')}.json",
+            mime="application/json",
+            use_container_width=True,
+            key="export_json",
+        )
 
 # ── Main Content ────────────────────────────────────────────────────────────
 
