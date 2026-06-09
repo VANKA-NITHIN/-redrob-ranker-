@@ -596,6 +596,7 @@ def run_ranker(candidates, source_label):
     st.session_state["elapsed"] = elapsed
     st.session_state["total"] = len(candidates)
     st.session_state["source"] = source_label
+    st.session_state["candidates_data"] = candidates
     st.session_state["active_tab"] = "Dashboard"
     st.toast(f"\u2705 Ranked {len(candidates)} candidates in {elapsed:.2f}s", icon="\U0001F3C6")
 
@@ -755,6 +756,151 @@ def _render_rank_card(rank, score, cid, reasoning, penalty, issues, large_style=
         f'<div class="score-bar"><div class="score-bar-fill" style="width:{pct:.1f}%;background:{bc};"></div></div>'
         f'</div>'
     )
+
+
+def find_candidate_by_cid(cid):
+    """Look up candidate data by candidate_id in session state."""
+    candidates = st.session_state.get("candidates_data", [])
+    for c in candidates:
+        if c.get("candidate_id") == cid:
+            return c
+    return None
+
+
+def _html_escape(text):
+    """Escape HTML special characters."""
+    return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _render_candidate_profile(candidate):
+    """Render full candidate profile using Streamlit native components."""
+    profile = candidate.get("profile", {})
+    signals = candidate.get("redrob_signals", {})
+    skills = candidate.get("skills", [])
+    edus = candidate.get("education", [])
+    history = candidate.get("career_history", [])
+
+    def esc(v, default=""):
+        return _html_escape(v or default)
+
+    # ── Profile Header ──
+    cols = st.columns([2, 1])
+    with cols[0]:
+        st.markdown(
+            f'<div style="padding:0.5rem 0;">'
+            f'<h4 style="color:var(--text-primary);margin:0;font-size:1.1rem;">{esc(profile.get("anonymized_name"), "?")}</h4>'
+            f'<div style="color:var(--accent-blue);font-size:0.9rem;margin:0.2rem 0;">{esc(profile.get("headline"))}</div>'
+            f'<div style="color:var(--text-muted);font-size:0.8rem;">'
+            f'{esc(profile.get("current_title"), "?")} @ {esc(profile.get("current_company"), "?")}'
+            f'</div>'
+            f'<div style="color:var(--text-dim);font-size:0.75rem;margin-top:0.2rem;">'
+            f'{esc(profile.get("location"))} &bull; {esc(profile.get("country"))}'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+    with cols[1]:
+        yrs = profile.get("years_of_experience", 0) or 0
+        st.markdown(
+            f'<div style="text-align:right;padding:0.5rem 0;">'
+            f'<div style="color:var(--text-primary);font-size:1.3rem;font-weight:700;">{yrs:.1f}yrs</div>'
+            f'<div style="color:var(--text-muted);font-size:0.7rem;">Experience</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── Summary ──
+    summary = profile.get("summary", "")
+    if summary:
+        st.markdown(
+            f'<div style="color:var(--text-muted);font-size:0.8rem;line-height:1.5;'
+            f'padding:0.5rem;background:var(--bg-sample);border-radius:6px;margin-bottom:0.8rem;">'
+            f'{esc(summary[:300])}{"..." if len(summary) > 300 else ""}'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── Career History ──
+    if history:
+        st.markdown('<div style="color:var(--text-secondary);font-size:0.85rem;font-weight:600;margin:0.5rem 0 0.3rem 0;">\U0001F4BC Career History</div>', unsafe_allow_html=True)
+        for job in history:
+            title = esc(job.get("title"))
+            company = esc(job.get("company"))
+            duration = job.get("duration_months", 0) or 0
+            is_current = job.get("is_current", False)
+            desc = esc((job.get("description", "") or "")[:200])
+            st.markdown(
+                f'<div style="border-left:2px solid var(--accent-blue);padding:0.3rem 0.6rem;margin:0.2rem 0;">'
+                f'<div style="color:var(--text-primary);font-size:0.8rem;font-weight:500;">{title} @ {company}</div>'
+                f'<div style="color:var(--text-dim);font-size:0.7rem;">{duration}mo {"" if not is_current else "(Current)"}</div>'
+                f'<div style="color:var(--text-muted);font-size:0.75rem;">{desc}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    # ── Education ──
+    if edus:
+        st.markdown('<div style="color:var(--text-secondary);font-size:0.85rem;font-weight:600;margin:0.5rem 0 0.3rem 0;">\U0001F393 Education</div>', unsafe_allow_html=True)
+        for edu in edus:
+            inst = esc(edu.get("institution"))
+            degree = esc(edu.get("degree"))
+            field = esc(edu.get("field_of_study"))
+            grade = esc(edu.get("grade"))
+            st.markdown(
+                f'<div style="display:flex;gap:0.5rem;padding:0.2rem 0;color:var(--text-muted);font-size:0.78rem;">'
+                f'<span style="color:var(--text-primary);">{degree}</span>'
+                f'<span>{field}</span>'
+                f'<span>@ {inst}</span>'
+                f'<span style="color:var(--text-dim);">{grade}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    # ── Skills ──
+    if skills:
+        st.markdown('<div style="color:var(--text-secondary);font-size:0.85rem;font-weight:600;margin:0.5rem 0 0.3rem 0;">\U0001F528 Skills</div>', unsafe_allow_html=True)
+        tags = ""
+        for s in skills[:15]:
+            name = esc(s.get("name"))
+            prof = s.get("proficiency", "beginner")
+            prof_color = {"beginner": "var(--text-dim)", "intermediate": "var(--warning)", "advanced": "var(--success)", "expert": "var(--accent-purple)"}.get(prof, "var(--text-dim)")
+            tags += f'<span style="display:inline-block;background:var(--bg-sample);color:{prof_color};padding:0.15rem 0.5rem;border-radius:4px;font-size:0.7rem;margin:0.15rem;">{name}</span>'
+        st.markdown(f'<div>{tags}</div>', unsafe_allow_html=True)
+
+    # ── Redrob Signals ──
+    st.markdown('<div style="color:var(--text-secondary);font-size:0.85rem;font-weight:600;margin:0.5rem 0 0.3rem 0;">\U0001F4CA Redrob Signals</div>', unsafe_allow_html=True)
+    sig_cols = st.columns(4)
+    signal_items = [
+        (f"{signals.get('profile_completeness_score', 0):.0f}%", "Completeness"),
+        (f"{signals.get('connection_count', 0)}", "Connections"),
+        (f"{signals.get('search_appearance_30d', 0)}", "Search Appearances"),
+        (f'{signals.get("recruiter_response_rate", 0):.0%}', "Response Rate"),
+        (f'{signals.get("interview_completion_rate", 0):.0%}', "Interview Rate"),
+        (f"{signals.get('notice_period_days', 0)}d", "Notice Period"),
+        ("Yes" if signals.get("open_to_work_flag", False) else "No", "Open to Work"),
+        (f'\U0001F4E7{"" if signals.get("verified_email", False) else "\u2716"}', "Email"),
+    ]
+    for i, (val, label) in enumerate(signal_items):
+        with sig_cols[i % 4]:
+            st.markdown(
+                f'<div style="padding:0.3rem 0;">'
+                f'<div style="color:var(--text-primary);font-size:0.85rem;font-weight:600;">{val}</div>'
+                f'<div style="color:var(--text-dim);font-size:0.65rem;">{label}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    # Salary range
+    salary = signals.get("expected_salary_range_inr_lpa", {})
+    if salary and salary.get("min", 0) and salary.get("max", 0):
+        s_min = salary["min"]
+        s_max = salary["max"]
+        st.markdown(
+            f'<div style="color:var(--text-muted);font-size:0.75rem;margin-top:0.3rem;">'
+            f'Salary: \u20B9{s_min:.1f} - \u20B9{s_max:.1f} LPA'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
 
 # ── Sidebar ─────────────────────────────────────────────────────────────────
@@ -988,6 +1134,40 @@ if "rankings" in st.session_state:
                 card = _render_rank_card(rank, score, cid, reasoning, penalty, issues, large_style=False)
                 st.markdown(card, unsafe_allow_html=True)
 
+        # ── Candidate Profile Viewer ──
+        st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div style="color:var(--text-secondary);font-size:0.9rem;font-weight:600;margin-bottom:0.3rem;">'
+            '\U0001F50D Candidate Lookup</div>',
+            unsafe_allow_html=True,
+        )
+
+        # Build list of selectable candidates
+        cid_list = [r[1] for r in rankings]
+        selected_cid = st.selectbox(
+            "Select a candidate to view full profile:",
+            cid_list,
+            index=None,
+            placeholder="Choose a candidate...",
+            label_visibility="collapsed",
+        )
+
+        if selected_cid:
+            candidate = find_candidate_by_cid(selected_cid)
+            if candidate:
+                st.markdown(
+                    f'<div style="background:var(--bg-card-alt);border:1px solid var(--border-card);'
+                    f'border-radius:10px;padding:1rem;margin-top:0.5rem;">',
+                    unsafe_allow_html=True,
+                )
+                _render_candidate_profile(candidate)
+
+                # Close button
+                if st.button("\u2716 Close Profile", key="close_candidate_profile", type="secondary"):
+                    st.rerun()
+
+                st.markdown('</div>', unsafe_allow_html=True)
+
     # ── Tab 3: Insights ──
     with tab3:
         col1, col2 = st.columns(2)
@@ -1103,7 +1283,7 @@ if "rankings" in st.session_state:
     # Clear button
     st.markdown('<div style="text-align:center;margin-top:1rem;">', unsafe_allow_html=True)
     if st.button("\U0001F5D1 Clear & Start Over", type="secondary", use_container_width=False):
-        for key in ["rankings", "elapsed", "total", "source", "active_tab"]:
+        for key in ["rankings", "elapsed", "total", "source", "active_tab", "candidates_data"]:
             if key in st.session_state:
                 del st.session_state[key]
         st.rerun()
