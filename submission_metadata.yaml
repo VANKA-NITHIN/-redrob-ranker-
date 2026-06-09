@@ -1,0 +1,80 @@
+# Redrob Hackathon — Submission Metadata
+
+# ============================================================
+# Team identity
+# ============================================================
+team_name: "VANKA-NITHIN"
+
+primary_contact:
+  name: "VANKA NITHIN"
+  email: "vankanithin2004@gmail.com"
+  phone: "+91-XXXXXXXXXX"
+
+team_members:
+  - name: "VANKA NITHIN"
+    email: "vankanithin2004@gmail.com"
+    role: "Solo Participant"
+
+# ============================================================
+# Code and reproducibility
+# ============================================================
+github_repo: "https://github.com/VANKA-NITHIN/-redrob-ranker-"
+
+sandbox_link: "https://huggingface.co/spaces/VANKA-NITHIN/redrob-ranker"
+
+reproduce_command: "python ranker.py"
+
+# ============================================================
+# Compute environment
+# ============================================================
+compute:
+  platform: "Local Machine"
+  cpu_cores: 8
+  ram_gb: 16
+  python_version: "3.11+"
+  os: "Windows"
+  uses_gpu_for_inference: false
+  has_network_during_ranking: false
+  pre_computation_required: false
+  pre_computation_time_minutes: 0
+
+# ============================================================
+# AI tools declaration
+# ============================================================
+ai_tools_used:
+  - "Claude/Codebuff"
+  - "Claude"
+  - "GitHub Copilot"
+
+aI_usage_summary: |
+  Used Claude/Codebuff as the primary development assistant for code generation,
+  code review, and architectural discussion. Used GitHub Copilot for inline
+  autocomplete. No candidate data was fed to any LLM.
+
+# ============================================================
+# Approach summary
+# ============================================================
+methodology_summary: |
+  10-component rule-based ranker. Career history relevance (35%) is the
+  primary signal; role relevance (20%) surfaces AI/ML titles; production AI
+  evidence (14%) scores ML deployment experience; retrieval & ranking
+  experience (10%) is a dedicated component for the JD's #1 ask;
+  behavioral signals (10%) weights recruiter response rate, GitHub activity,
+  and platform engagement; experience fit (5%), skills (3%), education (3%)
+  with location (+3%) and notice period (+2%) bonuses. 8 honeypot detection
+  checks: timeline inconsistency, overlapping education, AI skills without
+  background, short descriptions, job-hopping, summary mismatch, career
+  exceeds stated experience, endorsement mismatch. Scores use exponential
+  normalization and min-heap Top-K selection. Runs 100K candidates in ~92s
+  on CPU. 34 unit tests. 0 honeypots in top 100.
+
+# ============================================================
+# Declarations
+# ============================================================
+declarations:
+  read_submission_spec: true
+  code_is_original_work: true
+  no_collusion: true
+  honeypot_check_done: true
+  reproduction_tested: true
+

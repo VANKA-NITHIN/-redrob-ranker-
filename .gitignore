@@ -1,0 +1,39 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.class
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files (too large)
+*.jsonl
+!data/sample_candidates.json
+
+# Agent rules
+.agent/
+
+# Environment variables
+.env
+.env.*
+
+# Extracted challenge docs (derived content)
+data/*.txt
+
+# Temp/utility scripts
+
+# Duplicate output files
+output/submission_cfg9.csv
+output/sample_submission.csv
