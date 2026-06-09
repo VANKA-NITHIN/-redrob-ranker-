@@ -364,15 +364,20 @@ if "rankings" in st.session_state:
     clean_count = total - honeypot_count - suspicious_count
     elapsed = st.session_state["elapsed"]
 
+    # Pre-compute labels (avoids backslash issues in f-string expressions on Python 3.11)
+    label_honeypot = "\U0001F534 Honeypots"
+    label_suspicious = "\U0001F7E1 Suspicious"
+    label_clean = "\u2705 Clean"
+
     metrics_html = f"""
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.8rem;margin-bottom:1.5rem;">
         {make_metric(f'{total:,}', 'Candidates')}
         {make_metric(f'{elapsed:.2f}s', 'Time')}
         {make_metric(f'{top_score:.4f}', 'Top Score')}
         {make_metric(f'{bottom_score:.4f}', 'Bottom Score')}
-        {make_metric(f'{honeypot_count}', '\U0001F534 Honeypots', 'honeypot-metric')}
-        {make_metric(f'{suspicious_count}', '\U0001F7E1 Suspicious', 'suspicious-metric')}
-        {make_metric(f'{clean_count}', '\u2705 Clean', 'clean-metric')}
+        {make_metric(f'{honeypot_count}', label_honeypot, 'honeypot-metric')}
+        {make_metric(f'{suspicious_count}', label_suspicious, 'suspicious-metric')}
+        {make_metric(f'{clean_count}', label_clean, 'clean-metric')}
     </div>
     """
     st.markdown(metrics_html, unsafe_allow_html=True)
