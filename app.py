@@ -6,11 +6,9 @@ import json
 import os
 import sys
 import time
-from io import StringIO
-
-import pandas as pd
 from collections import Counter
 
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
@@ -879,6 +877,41 @@ else:
             unsafe_allow_html=True
         )
         st.markdown('</div>', unsafe_allow_html=True)
+
+    # Algorithm info
+    with st.expander("About the Ranking Algorithm"):
+        col_comp, col_hp = st.columns(2)
+        with col_comp:
+            st.markdown("""
+            **Scoring Components**
+            - Career Relevance (35%): Title tier, industry fit, startup bonus
+            - Role Relevance (20%): Current title + headline match
+            - Production AI Evidence (14%): ML deployment experience
+            - Retrieval & Ranking (10%): Search/ranking systems
+            - Behavioral Signals (10%): Response rate, GitHub activity
+            - Experience Fit (5%): Peak 5-9 years
+            - Skills Match (3%): Keyword coverage
+            - Education (3%): Tier + field relevance
+            - Location Bonus (+3%): Pune/Noida preferred
+            - Notice Period (+2%): Sub-30 day preferred
+            """)
+        with col_hp:
+            st.markdown("""
+            **Honeypot Detection (11 checks)**
+            - Timeline inconsistency, overlapping education
+            - AI skills without background, endorsement mismatch
+            - Career exceeds stated experience
+            - Short/empty descriptions, job-hopping
+            - Summary mismatch, salary inversion
+            - Signup/active date mismatch
+            - Offer acceptance without interviews
+
+            **Performance**
+            - 100K candidates in ~43s (CPU-only)
+            - 16,157 honeypots detected
+            - 0 honeypots in top 100
+            - 100/100 unique reasonings
+            """)
 
 st.markdown('<div class="footer">Built for the Redrob Hackathon &mdash; Intelligent Candidate Discovery &amp; Ranking Challenge</div>',
             unsafe_allow_html=True)
