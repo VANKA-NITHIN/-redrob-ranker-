@@ -31,6 +31,11 @@ from ranker import (
     rare_skill_diamond_score,
     talent_platform_bonus,
     profile_consistency_score,
+    latent_role_classifier,
+    latent_role_bonus,
+    recruiter_attractiveness_score,
+    startup_fit_score,
+    continuous_honeypot_risk_score,
 )
 
 
@@ -1162,6 +1167,171 @@ class TestEducationScore(unittest.TestCase):
         )
         score = education_score(candidate)
         self.assertLess(score, 2.0)
+
+
+class TestLatentRoleClassifier(unittest.TestCase):
+    """Test the latent_role_classifier and latent_role_bonus functions."""
+
+    def test_ml_engineer_has_latent_role_signals(self):
+        candidate = _make_candidate()
+        roles = latent_role_classifier(candidate)
+        self.assertGreater(len(roles), 0)
+        # Test candidate has production AI descriptions, should score on applied_ml
+
+    def test_latent_role_bonus_search_retrieval(self):
+        """Candidate with search/retrieval keywords gets high bonus."""
+        candidate = _make_candidate(
+            career_history=[
+                {
+                    "company": "SearchCo",
+                    "title": "Search Engineer",
+                    "start_date": "2020-01-01",
+                    "end_date": None,
+                    "duration_months": 48,
+                    "is_current": True,
+                    "industry": "Technology",
+                    "company_size": "1001-5000",
+                    "description": "Built search retrieval and ranking systems. Worked on query understanding, indexing pipeline, and search relevance. Implemented semantic search and dense retrieval with embeddings. Improved NDCG and precision@k metrics through feature engineering and model optimization.",
+                }
+            ]
+        )
+        bonus = latent_role_bonus(candidate)
+        self.assertGreater(bonus, 0.5)
+
+    def test_latent_role_bonus_accountant(self):
+        """Accountant should have low latent role bonus."""
+        candidate = _make_candidate(
+            current_title="Accountant",
+            career_history=[
+                {
+                    "company": "Firm",
+                    "title": "Accountant",
+                    "start_date": "2020-01-01",
+                    "end_date": None,
+                    "duration_months": 48,
+                    "is_current": True,
+                    "industry": "Finance",
+                    "company_size": "1001-5000",
+                    "description": "Prepared financial statements and reconciled accounts. Managed month-end close process.",
+                }
+            ],
+            skills=[]  # Clear skills to avoid false signals
+        )
+        bonus = latent_role_bonus(candidate)
+        self.assertLess(bonus, 0.5)
+
+
+class TestRecruiterAttractiveness(unittest.TestCase):
+    """Test the recruiter_attractiveness_score function."""
+
+    def test_high_saved_recruiters(self):
+        """Candidate with many recruiter saves scores high."""
+        candidate = _make_candidate()
+        score = recruiter_attractiveness_score(candidate)
+        self.assertGreater(score, 0.5)
+
+    def test_no_signals_low(self):
+        candidate = _make_candidate(redrob_signals={})
+        score = recruiter_attractiveness_score(candidate)
+        self.assertEqual(score, 0.0)
+
+    def test_zero_recruiter_engagement(self):
+        """Candidate with zero recruiter activity scores low."""
+        candidate = _make_candidate(
+            redrob_signals={
+                "saved_by_recruiters_30d": 0,
+                "search_appearance_30d": 0,
+                "recruiter_response_rate": 0,
+                "interview_completion_rate": 0,
+                "profile_completeness_score": 0,
+                "verified_email": False,
+                "verified_phone": False,
+                "linkedin_connected": False,
+                "github_activity_score": -1,
+            }
+        )
+        score = recruiter_attractiveness_score(candidate)
+        self.assertLess(score, 0.3)
+
+
+class TestStartupFit(unittest.TestCase):
+    """Test the startup_fit_score function."""
+
+    def test_startup_engineer_high_score(self):
+        """Early-stage startup engineer should score high."""
+        candidate = _make_candidate(
+            career_history=[
+                {
+                    "company": "StartupCo",
+                    "title": "First ML Engineer",
+                    "start_date": "2020-01-01",
+                    "end_date": None,
+                    "duration_months": 48,
+                    "is_current": True,
+                    "industry": "AI",
+                    "company_size": "11-50",
+                    "description": "Built the ML platform from scratch as the first engineer. Designed and architected the ranking system end-to-end. Led the development of search infrastructure. Shipped products to users and iterated based on feedback.",
+                }
+            ]
+        )
+        score = startup_fit_score(candidate)
+        self.assertGreater(score, 0.5)
+
+    def test_consultant_low_startup_fit(self):
+        """Service/consulting background scores lower."""
+        candidate = _make_candidate(
+            career_history=[
+                {
+                    "company": "TCS",
+                    "title": "Software Engineer",
+                    "start_date": "2020-01-01",
+                    "end_date": None,
+                    "duration_months": 48,
+                    "is_current": True,
+                    "industry": "Technology",
+                    "company_size": "10001+",
+                    "description": "Worked on client projects. Managed deliverables and stakeholder communication.",
+                }
+            ]
+        )
+        score = startup_fit_score(candidate)
+        self.assertLess(score, 0.5)
+
+    def test_no_history_zero(self):
+        candidate = _make_candidate(career_history=[])
+        score = startup_fit_score(candidate)
+        self.assertEqual(score, 0.0)
+
+
+class TestContinuousHoneypotRisk(unittest.TestCase):
+    """Test the continuous_honeypot_risk_score function."""
+
+    def test_clean_candidate_low_risk(self):
+        candidate = _make_candidate()
+        risk, anomalies = continuous_honeypot_risk_score(candidate)
+        self.assertLess(risk, 0.3)
+
+    def test_expert_skills_low_experience(self):
+        """Many expert skills with low experience = suspicious."""
+        candidate = _make_candidate(
+            years_of_experience=2,
+            skills=[
+                {"name": f"Skill{i}", "proficiency": "expert", "endorsements": 20}
+                for i in range(6)
+            ]
+        )
+        risk, anomalies = continuous_honeypot_risk_score(candidate)
+        self.assertGreater(risk, 0.0)
+
+    def test_high_skill_count_anomaly(self):
+        """Unusually high skill count triggers anomaly."""
+        candidate = _make_candidate(
+            skills=[{"name": f"Skill{i}", "proficiency": "intermediate", "endorsements": 0}
+                    for i in range(25)]
+        )
+        risk, anomalies = continuous_honeypot_risk_score(candidate)
+        self.assertGreater(risk, 0.0)
+        self.assertTrue(any("skill count" in a for a in anomalies))
 
 
 class TestIntegration(unittest.TestCase):

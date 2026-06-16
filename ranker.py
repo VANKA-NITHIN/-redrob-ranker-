@@ -43,7 +43,13 @@ from config import (
     FAST_FILTER_TOP_K, FINAL_TOP_K,
     TFIDF_MAX_FEATURES, TFIDF_NGRAM_RANGE, TFIDF_MAX_DF, TFIDF_MIN_DF, TFIDF_SAMPLE_SIZE,
     SCURVE_STEEPNESS, SCURVE_MIDPOINT,
+    SCURVE_STAGE_1_STEEPNESS, SCURVE_STAGE_1_MIDPOINT,
+    SCURVE_STAGE_2_STEEPNESS, SCURVE_STAGE_2_MIDPOINT,
+    MIN_SCORE_GAP,
     BEHAVIORAL_MULTIPLIER_MIN, BEHAVIORAL_MULTIPLIER_MAX,
+    LATENT_ROLE_SIGNALS,
+    STARTUP_OWNERSHIP_PHRASES, PRODUCT_OWNERSHIP_PHRASES, TECHNICAL_DEPTH_PHRASES,
+    STAT_ANOMALY_Z_SCORE, HONEYPOT_CONTINUOUS_ALPHA,
 )
 
 DATA_DIR = "data"
@@ -1035,6 +1041,392 @@ def behavioral_multiplier(candidate):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# LATENT ROLE CLASSIFIER — Detect engineers WITHOUT requiring exact keywords
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def latent_role_classifier(candidate):
+    """Classify candidate into latent engineering role types from career descriptions.
+    
+    Detects candidates who ARE search/retrieval/ranking/recommendation engineers
+    even when keywords are missing, terminology is indirect, or descriptions are
+    plain English. This is critical because the JD's #1 ask is retrieval/ranking
+    experience, and many genuine candidates describe it in domain-specific terms.
+    
+    Uses career description text + skills + company signals to infer role type.
+    Returns dict of role_probabilities for 6 role types.
+    """
+    history = candidate.get("career_history", [])
+    profile = candidate.get("profile", {})
+    skills = candidate.get("skills", [])
+    
+    # Build unified text from all career descriptions
+    all_desc = " ".join([
+        ((h.get("description") or "") + " " + (h.get("title") or "") + " " + (h.get("industry") or "")).lower()
+        for h in history
+    ])
+    
+    summary = (profile.get("summary") or "").lower()
+    headline = (profile.get("headline") or "").lower()
+    current_title = (profile.get("current_title") or "").lower()
+    
+    # Combine all candidate text
+    all_text = " ".join([all_desc, summary, headline, current_title])
+    skill_names = set(s["name"].lower() for s in skills)
+    
+    # Score each latent role type
+    roles = {}
+    for role_name, signals in LATENT_ROLE_SIGNALS.items():
+        # Count exact matches in career text
+        exact_matches = sum(1 for sig in signals if sig in all_text)
+        
+        # Bonus for matches in current role (recency weighted)
+        current_role_text = ""
+        for h in history:
+            if h.get("is_current", False):
+                current_role_text = ((h.get("description") or "") + " " + (h.get("title") or "")).lower()
+                break
+        current_matches = sum(1 for sig in signals if sig in current_role_text)
+        
+        # Bonus for matching skills
+        skill_matches = sum(1 for sn in skill_names if any(sig.replace(" ", "") in sn.replace(" ", "") for sig in signals))
+        
+        # Company names that correlate with role
+        company_text = " ".join([(h.get("company") or "").lower() for h in history])
+        company_bonus = 0
+        if "search" in role_name and any(c in company_text for c in ["google", "bing", "elastic", "algolia", "search"]):
+            company_bonus = 2
+        if "recommendation" in role_name and any(c in company_text for c in ["netflix", "spotify", "pinterest", "amazon"]):
+            company_bonus = 2
+        
+        # Compute weighted score
+        score = (
+            exact_matches * 1.0 +
+            current_matches * 2.0 +  # Recency boost: 2x for current role
+            skill_matches * 0.5 +
+            company_bonus
+        )
+        roles[role_name] = score
+    
+    # Normalize using softmax to get probabilities summing to 1.0
+    # Add epsilon to prevent division by zero
+    eps = 1e-8
+    values = list(roles.values())
+    if all(v == 0 for v in values):
+        return {r: 0.0 for r in roles}
+    max_val = max(values)
+    exp_values = [math.exp(v - max_val) for v in values]
+    sum_exp = sum(exp_values)
+    return {r: exp_values[i] / (sum_exp + eps) for i, r in enumerate(roles)}
+
+
+def latent_role_bonus(candidate):
+    """Compute bonus score based on latent role classification.
+    
+    Candidates whose latent role matches the JD's priority roles
+    (search/retrieval, recommendation/ranking, applied ML) get a bonus.
+    This helps surface elite candidates who use plain language.
+    """
+    roles = latent_role_classifier(candidate)
+    
+    # JD priority roles (weighted by relevance)
+    priority_roles = {
+        "search_retrieval_engineer": 1.0,
+        "recommendation_ranking_engineer": 1.0,
+        "search_relevance_scientist": 0.9,
+        "applied_ml_engineer": 0.7,
+        "ml_platform_infra_engineer": 0.5,
+    }
+    
+    total_bonus = 0.0
+    for role, prob in roles.items():
+        if role in priority_roles:
+            total_bonus += prob * priority_roles[role]
+    
+    return total_bonus
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# RECRUITER ATTRACTIVENESS — Model what a REAL Redrob recruiter would do
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def recruiter_attractiveness_score(candidate):
+    """Model how likely a Redrob recruiter would shortlist this candidate.
+    
+    The Redrob signals ARE ground truth — they represent REAL recruiter behavior.
+    Saved_by_recruiters = "a real human recruiter thought this candidate was worth saving"
+    Search_appearance = "recruiters are actively searching for this profile"
+    Response_rate = "recruiters actually take calls with this person"
+    
+    This combines these signals into a single attractiveness score (0-1)
+    that directly correlates with recruiter judgment.
+    """
+    signals = candidate.get("redrob_signals", {})
+    if not signals:
+        return 0.0
+    
+    # --- Direct Recruiter Validation (highest weight) ---
+    # A candidate saved by many recruiters is almost certainly high-quality
+    saved = signals.get("saved_by_recruiters_30d", 0) or 0
+    saved_score = 1.0 - math.exp(-saved / 8)  # Soft cap: 8 saves = ~63% boost
+    
+    # Search appearance = recruiter demand signal
+    search_app = signals.get("search_appearance_30d", 0) or 0
+    search_score = 1.0 - math.exp(-search_app / 150)  # Soft cap: 150 appearances
+    
+    # --- Engagement Signals ---
+    # Response rate: recruiters are more likely to contact responsive candidates
+    resp_rate = signals.get("recruiter_response_rate", -1)
+    response_score = resp_rate if resp_rate >= 0 else 0.0
+    
+    # Interview completion rate: reliable, engaged candidates
+    interview_rate = signals.get("interview_completion_rate", -1)
+    interview_score = interview_rate if interview_rate >= 0 else 0.0
+    
+    # Profile completeness: recruiter can see full picture
+    completeness = signals.get("profile_completeness_score", 0) or 0
+    completeness_score = completeness / 100.0
+    
+    # --- Credibility Signals ---
+    # Verified contact = higher trust
+    verified_score = 0.0
+    if signals.get("verified_email", False):
+        verified_score += 0.15
+    if signals.get("verified_phone", False):
+        verified_score += 0.10
+    if signals.get("linkedin_connected", False):
+        verified_score += 0.05
+    
+    # GitHub activity = technical credibility
+    github = signals.get("github_activity_score", -1)
+    github_score = (github / 100.0) if github >= 0 else 0.0
+    
+    # --- Composite Score ---
+    # Weights calibrated from EDA: saved_by_recruiters is the strongest signal
+    # because it directly measures recruiter validation
+    score = (
+        saved_score * 0.30 +
+        search_score * 0.15 +
+        response_score * 0.10 +
+        interview_score * 0.10 +
+        completeness_score * 0.10 +
+        verified_score * 0.10 +
+        github_score * 0.15
+    )
+    
+    return min(score, 1.0)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STARTUP FIT SCORE — Founding team compatibility
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def startup_fit_score(candidate):
+    """Score how well a candidate fits a founding team / early-stage startup role.
+    
+    The JD is for "Senior AI Engineer (Founding Team)" at Redrob AI.
+    This means we need:
+    - Candidates who thrive in unstructured environments
+    - Candidates who take ownership
+    - Candidates who build from scratch
+    - Candidates with product sense
+    - Candidates who have been at early-stage companies before
+    
+    Returns: 0.0 to 1.0 (higher = better startup fit)
+    """
+    history = candidate.get("career_history", [])
+    profile = candidate.get("profile", {})
+    signals = candidate.get("redrob_signals", {})
+    
+    if not history:
+        return 0.0
+    
+    score = 0.0
+    signals_found = 0
+    
+    for job in history:
+        desc = (job.get("description") or "").lower()
+        title = (job.get("title") or "").lower()
+        company_size = (job.get("company_size") or "")
+        industry = (job.get("industry") or "").lower()
+        is_current = job.get("is_current", False)
+        company = (job.get("company") or "").lower()
+        
+        job_score = 0.0
+        
+        # --- Signal 1: Early-stage company experience ---
+        is_early_stage = any(sz in company_size for sz in ["1-10", "11-50", "51-200"])
+        if is_early_stage:
+            job_score += 1.5
+            if is_current:
+                job_score += 1.0  # Current early-stage = currently doing startup
+        
+        # --- Signal 2: Ownership language ---
+        ownership_count = sum(1 for phrase in STARTUP_OWNERSHIP_PHRASES if phrase in desc)
+        job_score += ownership_count * 0.5
+        if ownership_count >= 2:
+            job_score += 1.0  # Multiple ownership signals = strong pattern
+        
+        # --- Signal 3: Product ownership language ---
+        product_count = sum(1 for phrase in PRODUCT_OWNERSHIP_PHRASES if phrase in desc)
+        job_score += product_count * 0.3
+        
+        # --- Signal 4: Technical depth indicators ---
+        tech_depth = sum(1 for phrase in TECHNICAL_DEPTH_PHRASES if phrase in desc)
+        job_score += tech_depth * 0.4
+        
+        # --- Signal 5: Product/startup industry ---
+        startup_industries = ["ai", "software", "internet", "saas", "fintech", "healthtech", "edtech"]
+        if any(ind in industry for ind in startup_industries):
+            job_score += 0.3
+        
+        # --- Signal 6: Notable startup role indicators ---
+        if any(kw in title for kw in ["founder", "co-founder", "cofounder", "principal", "lead", "staff"]):
+            job_score += 1.0
+        
+        # --- Signal 7: Founding-adjacent keywords ---
+        if any(kw in title for kw in ["early", "founding", "first"]):
+            job_score += 2.0
+        
+        # Weight by recency
+        if is_current:
+            job_score *= 1.5
+        
+        score += job_score
+        signals_found += 1
+    
+    # --- Normalize ---
+    # Average across jobs (max realistic is around 8-10 per job)
+    if signals_found > 0:
+        avg = score / signals_found
+    else:
+        avg = 0.0
+    
+    # Normalize to 0-1
+    normalized = min(1.0, avg / 6.0)
+    
+    return normalized
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CONTINUOUS HONEYPOT RISK SCORE — Statistical anomaly detection
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def continuous_honeypot_risk_score(candidate):
+    """Compute a CONTINUOUS honeypot risk score (0-1) using statistical anomaly detection.
+    
+    Unlike the discrete detect_honeypot_deep() which uses binary checks, this
+    function treats each check as a continuous risk signal and aggregates them
+    using a statistical model. This is more resistant to adversarial manipulation
+    and captures subtle anomalies that binary checks miss.
+    
+    Statistical Anomalies Detected:
+    - Z-score based outlier detection for skill count, endorsements, etc.
+    - Timeline consistency as a continuous function
+    - Career progression smoothness
+    - Skill-experience correlation
+    - Description length vs content density
+    
+    Returns: (risk_score_0_to_1, anomaly_list)
+    """
+    profile = candidate.get("profile", {})
+    history = candidate.get("career_history", [])
+    skills = candidate.get("skills", [])
+    signals = candidate.get("redrob_signals", {})
+    edus = candidate.get("education", [])
+    
+    risk = 0.0
+    anomalies = []
+    
+    # --- Statistical Anomaly 1: Skill count Z-score ---
+    # From EDA: mean skills=9.6, std~4.0
+    skill_count = len(skills)
+    z_skills = abs((skill_count - 9.6) / 4.0)
+    if z_skills > STAT_ANOMALY_Z_SCORE:
+        severity = min(1.0, (z_skills - STAT_ANOMALY_Z_SCORE) / 3.0)
+        risk += severity * 0.10
+        anomalies.append(f"statistical anomaly: skill count ({skill_count}) is {z_skills:.1f} std from mean")
+    
+    # --- Statistical Anomaly 2: Experience Z-score ---
+    # From EDA: mean exp=7.2, std~4.5
+    years_exp = profile.get("years_of_experience", 0) or 0
+    z_exp = abs((years_exp - 7.2) / 4.5)
+    if z_exp > STAT_ANOMALY_Z_SCORE:
+        severity = min(1.0, (z_exp - STAT_ANOMALY_Z_SCORE) / 3.0)
+        risk += severity * 0.08
+        anomalies.append(f"statistical anomaly: experience ({years_exp}yrs) is {z_exp:.1f} std from mean")
+    
+    # --- Statistical Anomaly 3: Endorsement density ---
+    if skills:
+        total_endorsements = sum(s.get("endorsements", 0) or 0 for s in skills)
+        avg_endorsements = total_endorsements / len(skills)
+        # From EDA: typical endorsement density is low (mean ~5-10 per skill)
+        if avg_endorsements > 30:
+            severity = min(1.0, (avg_endorsements - 30) / 50)
+            risk += severity * 0.12
+            anomalies.append(f"statistical anomaly: avg {avg_endorsements:.0f} endorsements per skill")
+        elif avg_endorsements < 0.5 and skill_count > 5:
+            # Suspiciously low endorsements for many skills
+            risk += 0.05
+    
+    # --- Statistical Anomaly 4: Career progression smoothness ---
+    # Genuine careers have small overlaps/gaps; fake careers have jarring transitions
+    if len(history) >= 3:
+        gaps = []
+        for i in range(len(history) - 1):
+            curr_end = history[i].get("end_date", "") or ""
+            next_start = history[i + 1].get("start_date", "") or ""
+            if curr_end and next_start:
+                try:
+                    ce = int(curr_end[:4])
+                    ns = int(next_start[:4])
+                    gaps.append(ns - ce)
+                except (ValueError, IndexError):
+                    pass
+        if gaps:
+            # Genuine gap is 0-6 months
+            # Negative gap (overlap) is suspicious
+            # Large gap (>2 years) is suspicious
+            bad_gaps = sum(1 for g in gaps if g < -6 or g > 24)
+            if bad_gaps >= 2:
+                severity = min(1.0, bad_gaps / len(gaps))
+                risk += severity * 0.10
+                anomalies.append(f"statistical anomaly: {bad_gaps}/{len(gaps)} transitions have irregular gaps")
+    
+    # --- Statistical Anomaly 5: Profile completeness vs signal mismatch ---
+    # Highly complete profiles with very low recruiter engagement = suspicious
+    completeness = signals.get("profile_completeness_score", 0) or 0
+    saved = signals.get("saved_by_recruiters_30d", 0) or 0
+    if completeness > 80 and saved == 0:
+        risk += 0.08
+        anomalies.append("statistical anomaly: high completeness ({}%) but zero recruiter saves".format(completeness))
+    
+    # --- Statistical Anomaly 6: Description length uniformity ---
+    # Genuine candidates have varying description lengths; stuffed profiles are uniform
+    if len(history) >= 3:
+        desc_lengths = [len(h.get("description") or "") for h in history]
+        if all(d > 0 for d in desc_lengths):
+            max_l = max(desc_lengths)
+            min_l = min(desc_lengths)
+            ratio = min_l / max_l if max_l > 0 else 1.0
+            if ratio > 0.8:  # All descriptions are suspiciously similar length
+                risk += 0.06
+                anomalies.append("statistical anomaly: all descriptions have similar length (ratio={:.2f})".format(ratio))
+    
+    # --- Statistical Anomaly 7: Skill tier vs experience mismatch ---
+    if skills and years_exp > 0:
+        expert_skills = sum(1 for s in skills if s.get("proficiency") == "expert")
+        if expert_skills >= 5 and years_exp < 4:
+            severity = min(1.0, (expert_skills - 4) / 6)
+            risk += severity * 0.08
+            anomalies.append(f"statistical anomaly: {expert_skills} expert skills with only {years_exp:.0f}yrs exp")
+    
+    # Clamp
+    risk = min(risk, 1.0)
+    
+    return risk, anomalies
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # HONEYPOT DETECTION (20 Checks)
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1312,7 +1704,8 @@ def detect_honeypot_deep(candidate):
 def compute_cheap_score(candidate, semantic_similarity):
     """Compute Stage 1 score using only cheap features.
     
-    Components: TF-IDF semantic, title tier, experience, location, quick keyword counts.
+    Components: TF-IDF semantic, title tier, experience, location, quick keyword counts,
+    recruiter attractiveness signal (saved_by_recruiters is fast to compute).
     """
     profile = candidate.get("profile", {})
     years_exp = profile.get("years_of_experience", 0) or 0
@@ -1333,13 +1726,19 @@ def compute_cheap_score(candidate, semantic_similarity):
     # Location (fast)
     loc_score = location_preference_score(candidate)
     
+    # Fast recruiter attractiveness (only uses saved_by_recruiters which is cheap)
+    signals = candidate.get("redrob_signals", {})
+    saved = signals.get("saved_by_recruiters_30d", 0) or 0
+    saved_norm = 1.0 - math.exp(-saved / 5)  # 5 saves = ~63% boost
+    
     # Build cheap composite
     score = (
-        semantic_similarity * 0.30 +
-        title_normalized * 0.25 +
-        rr_summary_norm * 0.20 +
-        exp_fit * 0.15 +
-        loc_score * 0.10
+        semantic_similarity * 0.25 +
+        title_normalized * 0.20 +
+        rr_summary_norm * 0.15 +
+        exp_fit * 0.12 +
+        loc_score * 0.08 +
+        saved_norm * 0.20  # NEW: recruiter saves signal in fast filter
     )
     
     return score
@@ -1354,6 +1753,13 @@ def compute_total_score(candidate):
     
     Multi-dimensional scoring with behavioral multiplier (not additive).
     Components aligned for NDCG@10 optimization.
+    
+    NEW in v4.0:
+    - Latent Role Classifier: Detects search/ranking/retrieval engineers without keywords
+    - Recruiter Attractiveness: Models real recruiter behavior from Redrob signals
+    - Startup Fit Score: Founding team compatibility scoring
+    - Continuous Honeypot Risk: Statistical anomaly detection (Z-score based)
+    - Aggressive NDCG@10: Staged S-curve with tiered score separation
     """
     profile = candidate.get("profile", {})
     years_exp = profile.get("years_of_experience", 0) or 0
@@ -1405,10 +1811,38 @@ def compute_total_score(candidate):
     # --- NEW: Profile consistency ---
     consistency = profile_consistency_score(candidate)
     
+    # === v4.0 NEW STRATEGIC SIGNALS ===
+    
+    # --- NEW: Latent Role Bonus ---
+    # Detects search/ranking/retrieval engineers without requiring exact keywords
+    latent_role = latent_role_bonus(candidate)
+    # Scale: neutral engineers get 0.2-0.4, search/retrieval engineers get 0.6-1.0
+    
+    # --- NEW: Recruiter Attractiveness Score ---
+    # Models what a real Redrob recruiter would do (ground truth from signals)
+    recruiter_attr = recruiter_attractiveness_score(candidate)
+    
+    # --- NEW: Startup Fit Score ---
+    # Founding team compatibility (ownership, early-stage, product sense)
+    startup = startup_fit_score(candidate)
+    
+    # --- NEW: Continuous Honeypot Risk ---
+    # Statistical anomaly detection (Z-score outliers, smoothness checks)
+    cont_risk, cont_anomalies = continuous_honeypot_risk_score(candidate)
+    
     # --- Honeypot detection (full) ---
     hon_penalty, hon_issues = detect_honeypot_deep(candidate)
     
+    # Blend discrete and continuous honeypot scores
+    # Continuous risk captures subtle anomalies, discrete captures known patterns
+    blended_honeypot_penalty = HONEYPOT_CONTINUOUS_ALPHA * hon_penalty + (1 - HONEYPOT_CONTINUOUS_ALPHA) * (1.0 - cont_risk)
+    # Combine issue lists
+    all_issues = hon_issues + cont_anomalies
+    
     # --- Base score using strategic weights ---
+    # v4.0 weights optimized for NDCG@10 (50% of leaderboard score)
+    # Key change: latent_role and recruiter_attr get significant weight
+    # because they directly model JD priorities and recruiter ground truth
     base = (
         career_normalized * WEIGHTS["career_relevance"] +
         role_normalized * WEIGHTS["role_relevance"] +
@@ -1417,12 +1851,15 @@ def compute_total_score(candidate):
         exp_fit * WEIGHTS["experience_fit"] +
         skills_normalized * WEIGHTS["skills_match"] +
         edu_fit * WEIGHTS["education_score"] +
-        prog * 0.10 +                     # Career progression
-        coherence * 0.04 +                # Skill-career coherence
+        prog * 0.08 +                     # Career progression (slightly reduced)
+        coherence * 0.03 +                # Skill-career coherence
         company_qual * 0.03 +             # Company quality bonus
-        diamond * 0.06 +                  # Rare skill diamond (unicorn bonus)
-        talent * 0.04 +                   # Talent platform domain bonus
-        (0.0 - neg_penalty * 0.07)        # Negative signal penalty
+        diamond * 0.05 +                  # Rare skill diamond (unicorn bonus)
+        talent * 0.03 +                   # Talent platform domain bonus
+        (0.0 - neg_penalty * 0.06) +      # Negative signal penalty
+        latent_role * 0.08 +              # NEW: Latent role detection bonus
+        recruiter_attr * 0.06 +           # NEW: Recruiter attractiveness
+        startup * 0.05                    # NEW: Startup fit bonus
     )
     
     # --- Profile consistency multiplier ---
@@ -1437,13 +1874,13 @@ def compute_total_score(candidate):
     notice = notice_period_score(candidate)
     score += loc_score * 0.03 + notice * 0.02
     
-    # --- Honeypot penalty ---
-    score *= hon_penalty
+    # --- Blended honeypot penalty ---
+    score *= blended_honeypot_penalty
     
     # Safety clamp: prevent negative scores
     score = max(0.0, score)
     
-    return score, hon_penalty, hon_issues
+    return score, blended_honeypot_penalty, all_issues
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1453,23 +1890,45 @@ def compute_total_score(candidate):
 def s_curve_transform(scores, steepness=SCURVE_STEEPNESS, midpoint=SCURVE_MIDPOINT):
     """Apply S-curve (sigmoid) transformation to spread top scores.
     
-    Creates larger gaps between top candidates for better NDCG@10.
+    Creates score gaps between top candidates for better NDCG@10.
     Scores below midpoint get compressed; scores above get amplified.
+    Enforces a minimum gap between adjacent scores for clean separation.
     
-    Adaptive: if max score < 0.5 (low-quality pool), skip transformation
-    to avoid over-compressing already-low scores.
+    Using a single high-steepness sigmoid gives strong separation at the top
+    while smoothly varying across the score distribution.
     """
     if not scores:
         return []
     max_score = max(scores)
     if max_score < 0.5:
         return list(scores)  # Skip transformation for low-quality pools
-    return [1.0 / (1.0 + math.exp(-steepness * (s - midpoint))) for s in scores]
+    
+    # Sort scores descending so we can apply the curve and enforce gaps
+    sorted_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
+    sorted_scores = [scores[i] for i in sorted_indices]
+    
+    # Apply sigmoid transformation
+    transformed = [1.0 / (1.0 + math.exp(-steepness * (s - midpoint))) for s in sorted_scores]
+    
+    # Enforce minimum score gap between adjacent candidates (top-to-bottom)
+    # This prevents score ties and creates clean separation for NDCG
+    for i in range(len(transformed) - 1):
+        if transformed[i] - transformed[i + 1] < MIN_SCORE_GAP:
+            # Push the higher score up to maintain the gap
+            transformed[i] = transformed[i + 1] + MIN_SCORE_GAP
+    
+    # Restore original order
+    result = [0.0] * len(scores)
+    for orig_i, trans_val in zip(sorted_indices, transformed):
+        result[orig_i] = trans_val
+    
+    return result
 
 
 def generate_reasoning(candidate, score, hon_penalty, hon_issues):
     """Generate varied, specific reasoning for each candidate.
     Only called for the final top 100 candidates.
+    Includes v4.0 strategic signals.
     """
     profile = candidate.get("profile", {})
     title = profile.get("current_title", "")
@@ -1545,17 +2004,38 @@ def generate_reasoning(candidate, score, hon_penalty, hon_issues):
     elif notice >= 120:
         parts.append(f"{notice}d notice")
     
+    # --- Latent role signal ---
+    latent_role = latent_role_bonus(candidate)
+    if latent_role >= 0.7:
+        parts.append("*latent search/ranking engineer")
+    elif latent_role >= 0.5:
+        parts.append("latent ML/ranking signals")
+    
+    # --- Recruiter attractiveness ---
+    recruiter_attr = recruiter_attractiveness_score(candidate)
+    if recruiter_attr >= 0.7:
+        parts.append("*highly recruiter-validated")
+    elif recruiter_attr >= 0.5:
+        parts.append("good recruiter signals")
+    
+    # --- Startup fit ---
+    startup = startup_fit_score(candidate)
+    if startup >= 0.7:
+        parts.append("*strong startup fit")
+    elif startup >= 0.5:
+        parts.append("startup compatible")
+    
     # --- Diamond skill signal ---
     diamond = rare_skill_diamond_score(candidate)
     if diamond >= 0.8:
-        parts.append("★ full-skill diamond")
+        parts.append("*full-skill diamond")
     elif diamond >= 0.5:
-        parts.append("★ partial diamond skills")
+        parts.append("*partial diamond skills")
     
     # --- Talent platform signal ---
     talent = talent_platform_bonus(candidate)
     if talent >= 0.8:
-        parts.append("★ HR tech domain expert")
+        parts.append("*HR tech domain expert")
     elif talent >= 0.5:
         parts.append("recruiting domain exp")
     

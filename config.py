@@ -345,6 +345,120 @@ TFIDF_MAX_DF = 0.8               # Increased to allow more common terms through
 TFIDF_MIN_DF = 3
 TFIDF_SAMPLE_SIZE = 20000        # Fit IDF on first 20K docs; estimates stabilize fast
 
-SCURVE_STEEPNESS = 8.0
-SCURVE_MIDPOINT = 0.55
+SCURVE_STEEPNESS = 10.0      # More aggressive: creates 0.20+ gaps at top for better NDCG@10
+SCURVE_MIDPOINT = 0.52       # Lower midpoint means more candidates get amplified
+
+# =============================================================================
+# NDCG@10 Optimization — Strategic score shaping
+# =============================================================================
+
+# Staged S-curve parameters: different curves for top tiers
+# This creates a tiered score structure where elite candidates get amplified more
+SCURVE_STAGE_1_STEEPNESS = 12.0   # For top 10 (NDCG@10 optimization)
+SCURVE_STAGE_1_MIDPOINT = 0.48
+SCURVE_STAGE_2_STEEPNESS = 8.0    # For ranks 11-50 (NDCG@50 optimization)
+SCURVE_STAGE_2_MIDPOINT = 0.52
+
+# Minimum score gap enforced between adjacent ranked candidates
+# Prevents score ties and creates clean separation for NDCG
+MIN_SCORE_GAP = 0.002
+
+# =============================================================================
+# Honeypot Statistical Detection Thresholds
+# =============================================================================
+
+# Z-score threshold for statistical anomaly detection
+# Values derived from EDA: mean skills=9.6, std ~4.0; mean exp=7.2, std ~4.5
+STAT_ANOMALY_Z_SCORE = 2.5      # Flag candidates >2.5 std from mean
+HONEYPOT_CONTINUOUS_ALPHA = 0.7  # Blending factor for continuous vs discrete scoring
+
+# =============================================================================
+# Startup Fit Scoring
+# =============================================================================
+
+# Phrases indicating genuine startup experience (building from scratch)
+STARTUP_OWNERSHIP_PHRASES = [
+    "built from scratch", "built the", "designed and built",
+    "architected", "founded", "co-founded", "cofounder", "co-founder",
+    "first engineer", "founding engineer", "early engineer",
+    "0 to 1", "zero to one", "from concept",
+    "sole responsibility", "end-to-end ownership",
+    "led the development", "led the design",
+    "built the platform", "built the system",
+    "owned the", "took ownership",
+    "established the", "set up the",
+    "greenfield", "ground up",
+]
+
+PRODUCT_OWNERSHIP_PHRASES = [
+    "product", "user", "customer", "feature",
+    "roadmap", "sprint", "iteration",
+    "shipped", "launched", "released",
+    "metrics", "impact", "growth",
+    "A/B test", "experiment", "optimization",
+    "cross-functional", "stakeholder",
+]
+
+TECHNICAL_DEPTH_PHRASES = [
+    "system design", "architecture", "scalability",
+    "latency", "throughput", "performance",
+    "distributed", "microservices", "event-driven",
+    "high availability", "fault tolerance",
+    "monitoring", "observability", "telemetry",
+    "data pipeline", "real-time", "streaming",
+]
+
+LATENT_ROLE_SIGNALS = {
+    "search_retrieval_engineer": [
+        "search", "retrieval", "information retrieval", "index",
+        "query understanding", "query expansion", "query rewriting",
+        "result ranking", "search relevance", "search quality",
+        "web search", "enterprise search", "site search",
+        "typo tolerance", "did you mean", "autocomplete",
+        "suggestions", "personalized search", "faceted search",
+        "inverted index", "search index", "indexing pipeline",
+        "tf-idf", "bm25", "semantic search", "hybrid search",
+        "sparse retrieval", "dense retrieval", "embedding",
+        "re-ranking", "two-stage retrieval", "candidate generation",
+    ],
+    "recommendation_ranking_engineer": [
+        "recommendation", "recommender", "personalization",
+        "ranking", "learning to rank", "lambda rank", "lambdamart",
+        "ctr prediction", "click-through rate", "conversion",
+        "candidate selection", "candidate generation",
+        "user-item", "collaborative filtering", "matrix factorization",
+        "content-based", "hybrid recommendation",
+        "feature engineering", "online learning",
+        "exploration-exploitation", "multi-armed bandit",
+        "relevance feedback", "implicit feedback",
+    ],
+    "applied_ml_engineer": [
+        "production ml", "model deployment", "model serving",
+        "training pipeline", "inference", "model monitoring",
+        "feature store", "model registry", "versioning",
+        "a/b testing", "online evaluation", "offline evaluation",
+        "model performance", "model optimization", "quantization",
+        "distributed training", "model parallelism",
+        "pytorch", "tensorflow", "scikit-learn", "xgboost",
+        "hyperparameter tuning", "cross-validation",
+    ],
+    "ml_platform_infra_engineer": [
+        "ml platform", "ml infrastructure", "mlops",
+        "data pipeline", "feature engineering", "feature pipeline",
+        "airflow", "kubeflow", "mlflow", "tensorflow extended",
+        "model lifecycle", "ci/cd", "automation",
+        "kubernetes", "docker", "containerization",
+        "monitoring", "alerting", "observability",
+        "data warehouse", "data lake", "etl",
+    ],
+    "search_relevance_scientist": [
+        "evaluation", "relevance", "user satisfaction",
+        "ndcg", "mrr", "map", "precision@k", "recall@k",
+        "online metrics", "offline metrics", "judgment list",
+        "rater", "annotation", "ground truth",
+        "win/loss analysis", "side-by-side evaluation",
+        "user study", "click model", "session analysis",
+        "query log analysis", "behavioral analysis",
+    ],
+}
 
