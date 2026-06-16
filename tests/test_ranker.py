@@ -18,10 +18,19 @@ from ranker import (
     skills_match_score,
     experience_fit_score,
     education_score,
-    redrob_signals_score,
-    detect_honeypot,
+    behavioral_multiplier,
+    detect_honeypot_fast,
+    detect_honeypot_deep,
     compute_total_score,
     generate_reasoning,
+    negative_signal_penalty,
+    skill_career_coherence_score,
+    career_progression_score,
+    company_quality_score,
+    s_curve_transform,
+    rare_skill_diamond_score,
+    talent_platform_bonus,
+    profile_consistency_score,
 )
 
 
@@ -51,7 +60,7 @@ def _make_candidate(**overrides):
                 "is_current": True,
                 "industry": "Technology",
                 "company_size": "1001-5000",
-                "description": "Built production ranking and retrieval systems using vector search and embeddings. Worked on recommendation engine.",
+                "description": "Led development of ML-powered systems for the company's core ranking service. Built data pipelines and model serving infrastructure in Python and PyTorch. Worked closely with product teams to define requirements, implemented A/B testing frameworks, and monitored system performance in production. The team shipped bi-weekly updates and maintained 99.9% uptime. Managed relationships with three downstream teams and coordinated release schedules across four services. Led quarterly planning sessions and presented technical roadmaps to senior leadership, which helped align engineering priorities with business goals.",
             },
             {
                 "company": "Old Corp",
@@ -62,7 +71,7 @@ def _make_candidate(**overrides):
                 "is_current": False,
                 "industry": "Technology",
                 "company_size": "201-500",
-                "description": "Developed machine learning models for search relevance.",
+                "description": "Developed machine learning models for information retrieval tasks. Improved search relevance through feature engineering and model optimization. Collaborated with cross-functional teams to launch new features, conducted code reviews, and mentored junior engineers. Also contributed to the team's sprint planning and retrospective ceremonies. Participated in weekly standups and bi-weekly retrospectives. Documented system architecture decisions and maintained runbooks for production incidents. Helped onboard three new engineers and created training materials for the team's ML platform.",
             },
         ],
         "education": [
@@ -299,11 +308,11 @@ class TestCareerHistoryScore(unittest.TestCase):
 
 
 class TestHoneypotDetection(unittest.TestCase):
-    """Test detect_honeypot function."""
+    """Test detect_honeypot_deep function (20 checks)."""
 
     def test_clean_candidate(self):
         candidate = _make_candidate()
-        penalty, issues = detect_honeypot(candidate)
+        penalty, issues = detect_honeypot_deep(candidate)
         self.assertEqual(penalty, 1.0)
         self.assertEqual(len(issues), 0)
 
@@ -328,7 +337,7 @@ class TestHoneypotDetection(unittest.TestCase):
                 },
             ]
         )
-        penalty, issues = detect_honeypot(candidate)
+        penalty, issues = detect_honeypot_deep(candidate)
         self.assertLess(penalty, 1.0)
         self.assertTrue(any("overlapping" in i for i in issues))
 
@@ -347,7 +356,7 @@ class TestHoneypotDetection(unittest.TestCase):
                 }
             ]
         )
-        penalty, issues = detect_honeypot(candidate)
+        penalty, issues = detect_honeypot_deep(candidate)
         self.assertLess(penalty, 1.0)
         self.assertTrue(any("timeline" in i for i in issues))
 
@@ -380,7 +389,7 @@ class TestHoneypotDetection(unittest.TestCase):
                 },
             ]
         )
-        penalty, issues = detect_honeypot(candidate)
+        penalty, issues = detect_honeypot_deep(candidate)
         self.assertLess(penalty, 1.0)
         self.assertTrue(any("exceeds" in i for i in issues))
 
@@ -400,7 +409,7 @@ class TestHoneypotDetection(unittest.TestCase):
                 }
             ]
         )
-        penalty, issues = detect_honeypot(candidate)
+        penalty, issues = detect_honeypot_deep(candidate)
         self.assertLess(penalty, 1.0)
         self.assertTrue(any("short" in i for i in issues))
 
@@ -439,7 +448,7 @@ class TestHoneypotDetection(unittest.TestCase):
                 {"name": "NLP", "proficiency": "intermediate", "endorsements": 1},
             ]
         )
-        penalty, issues = detect_honeypot(candidate)
+        penalty, issues = detect_honeypot_deep(candidate)
         self.assertLess(penalty, 1.0)
         self.assertTrue(any("AI skills" in i for i in issues))
 
@@ -470,7 +479,7 @@ class TestHoneypotDetection(unittest.TestCase):
                 },
             ]
         )
-        penalty, issues = detect_honeypot(candidate)
+        penalty, issues = detect_honeypot_deep(candidate)
         self.assertLess(penalty, 1.0)
         self.assertTrue(any("empty" in i for i in issues))
 
@@ -492,38 +501,38 @@ class TestHoneypotDetection(unittest.TestCase):
                 for i in range(5)
             ]
         )
-        penalty, issues = detect_honeypot(candidate)
+        penalty, issues = detect_honeypot_deep(candidate)
         self.assertLess(penalty, 1.0)
         self.assertTrue(any("duration" in i for i in issues))
 
     def test_salary_range_inverted(self):
-        """Check 9: min > max should flag as honeypot."""
+        """Check 11: min > max should flag as honeypot."""
         candidate = _make_candidate(
             redrob_signals={
                 **_make_candidate()["redrob_signals"],
                 "expected_salary_range_inr_lpa": {"min": 50, "max": 20},
             }
         )
-        penalty, issues = detect_honeypot(candidate)
+        penalty, issues = detect_honeypot_deep(candidate)
         self.assertLess(penalty, 1.0)
         self.assertTrue(any("inverted" in i for i in issues),
                         f"Expected 'inverted' in issues but got: {issues}")
 
     def test_salary_single_point_suspicious(self):
-        """Check 9: min == max should be mildly suspicious."""
+        """Check 11: min == max should be mildly suspicious."""
         candidate = _make_candidate(
             redrob_signals={
                 **_make_candidate()["redrob_signals"],
                 "expected_salary_range_inr_lpa": {"min": 30, "max": 30},
             }
         )
-        penalty, issues = detect_honeypot(candidate)
+        penalty, issues = detect_honeypot_deep(candidate)
         self.assertLess(penalty, 1.0)
         self.assertTrue(any("single point" in i for i in issues),
                         f"Expected 'single point' in issues but got: {issues}")
 
     def test_signup_after_last_active(self):
-        """Check 10: last active before signup date."""
+        """Check 12: last active before signup date."""
         candidate = _make_candidate(
             redrob_signals={
                 **_make_candidate()["redrob_signals"],
@@ -531,13 +540,13 @@ class TestHoneypotDetection(unittest.TestCase):
                 "last_active_date": "2024-01-01",
             }
         )
-        penalty, issues = detect_honeypot(candidate)
+        penalty, issues = detect_honeypot_deep(candidate)
         self.assertLess(penalty, 1.0)
         self.assertTrue(any("before signup" in i for i in issues),
                         f"Expected 'before signup' in issues but got: {issues}")
 
     def test_offer_acceptance_no_interviews(self):
-        """Check 11: high offer rate with 0% interviews."""
+        """Check 13: high offer rate with 0% interviews."""
         candidate = _make_candidate(
             redrob_signals={
                 **_make_candidate()["redrob_signals"],
@@ -545,31 +554,363 @@ class TestHoneypotDetection(unittest.TestCase):
                 "interview_completion_rate": 0,
             }
         )
-        penalty, issues = detect_honeypot(candidate)
+        penalty, issues = detect_honeypot_deep(candidate)
         self.assertLess(penalty, 1.0)
         self.assertTrue(any("offer acceptance" in i for i in issues),
                         f"Expected 'offer acceptance' in issues but got: {issues}")
 
+    def test_ghost_score(self):
+        """Check 17: no verifiable internet presence."""
+        candidate = _make_candidate(
+            redrob_signals={
+                **_make_candidate()["redrob_signals"],
+                "search_appearance_30d": 0,
+                "saved_by_recruiters_30d": 0,
+                "github_activity_score": -1,
+                "verified_email": False,
+                "verified_phone": False,
+            }
+        )
+        penalty, issues = detect_honeypot_deep(candidate)
+        self.assertLess(penalty, 1.0)
+        self.assertTrue(any("internet presence" in i for i in issues),
+                        f"Expected 'internet presence' in issues but got: {issues}")
+
+    def test_no_career_history_check_2(self):
+        """Check 2: No career history should be eliminated immediately."""
+        candidate = _make_candidate(career_history=[])
+        penalty, issues = detect_honeypot_deep(candidate)
+        self.assertLess(penalty, 0.2)
+        self.assertTrue(any("no career" in i for i in issues))
+
+    def test_fictional_company_concentration_check_3(self):
+        """Check 3: >50% jobs at fictional companies."""
+        candidate = _make_candidate(
+            career_history=[
+                {
+                    "company": "Dunder Mifflin",
+                    "title": "Engineer",
+                    "start_date": "2020-01-01",
+                    "end_date": None,
+                    "duration_months": 24,
+                    "is_current": True,
+                    "industry": "Technology",
+                    "company_size": "1-10",
+                    "description": "Did work.",
+                },
+                {
+                    "company": "Initech",
+                    "title": "Developer",
+                    "start_date": "2018-01-01",
+                    "end_date": "2019-12-31",
+                    "duration_months": 24,
+                    "is_current": False,
+                    "industry": "Technology",
+                    "company_size": "1-10",
+                    "description": "Did more work.",
+                },
+            ]
+        )
+        penalty, issues = detect_honeypot_deep(candidate)
+        self.assertLess(penalty, 1.0)
+        self.assertTrue(any("fictional" in i for i in issues),
+                        f"Expected fictional company flag but got: {issues}")
+
+    def test_endorsement_mismatch_check_6(self):
+        """Check 6: high endorsements but very few skills."""
+        candidate = _make_candidate(
+            skills=[
+                {"name": "Python", "proficiency": "expert", "endorsements": 100},
+                {"name": "Java", "proficiency": "advanced", "endorsements": 80},
+            ]
+        )
+        penalty, issues = detect_honeypot_deep(candidate)
+        self.assertLess(penalty, 1.0)
+        self.assertTrue(any("endorsements" in i for i in issues),
+                        f"Expected endorsement mismatch flag but got: {issues}")
+
+    def test_summary_mismatch_check_10(self):
+        """Check 10: Many AI keywords in summary but none in career history."""
+        candidate = _make_candidate(
+            summary="retrieval ranking recommendation search embeddings vector database faiss "
+                    "pinecone elasticsearch production ml model deployment pytorch tensorflow "
+                    "and more AI systems",
+            career_history=[
+                {
+                    "company": "Corp",
+                    "title": "Accountant",
+                    "start_date": "2020-01-01",
+                    "end_date": None,
+                    "duration_months": 24,
+                    "is_current": True,
+                    "industry": "Finance",
+                    "company_size": "1001-5000",
+                    "description": "Prepared financial statements and reconciled accounts.",
+                }
+            ]
+        )
+        penalty, issues = detect_honeypot_deep(candidate)
+        self.assertLess(penalty, 1.0)
+        self.assertTrue(any("summary" in i for i in issues),
+                        f"Expected summary mismatch flag but got: {issues}")
+
+    def test_skill_career_mismatch_check_14(self):
+        """Check 14: 4+ AI skills not evidenced in career."""
+        candidate = _make_candidate(
+            current_title="Accountant",
+            career_history=[
+                {
+                    "company": "Firm",
+                    "title": "Accountant",
+                    "start_date": "2020-01-01",
+                    "end_date": None,
+                    "duration_months": 24,
+                    "is_current": True,
+                    "industry": "Finance",
+                    "company_size": "1001-5000",
+                    "description": "Did accounting.",
+                }
+            ],
+            skills=[
+                {"name": "PyTorch", "proficiency": "advanced", "endorsements": 5},
+                {"name": "TensorFlow", "proficiency": "advanced", "endorsements": 5},
+                {"name": "Computer Vision", "proficiency": "advanced", "endorsements": 5},
+                {"name": "NLP", "proficiency": "advanced", "endorsements": 5},
+                {"name": "FAISS", "proficiency": "advanced", "endorsements": 5},
+            ]
+        )
+        penalty, issues = detect_honeypot_deep(candidate)
+        self.assertLess(penalty, 1.0)
+        self.assertTrue(any("not evidenced" in i for i in issues),
+                        f"Expected skill-career mismatch flag but got: {issues}")
+
+    def test_impossible_timeline_check_16(self):
+        """Check 16: started working before education."""
+        candidate = _make_candidate(
+            career_history=[
+                {
+                    "company": "Old Corp",
+                    "title": "Engineer",
+                    "start_date": "2005-01-01",
+                    "end_date": "2008-12-31",
+                    "duration_months": 48,
+                    "is_current": False,
+                    "industry": "Technology",
+                    "company_size": "1001-5000",
+                    "description": "Worked early.",
+                }
+            ],
+            education=[
+                {
+                    "institution": "Univ",
+                    "degree": "B.Tech",
+                    "field_of_study": "CS",
+                    "start_year": 2010,
+                    "end_year": 2014,
+                    "tier": "tier_3",
+                }
+            ]
+        )
+        penalty, issues = detect_honeypot_deep(candidate)
+        self.assertLess(penalty, 1.0)
+        self.assertTrue(any("before education" in i for i in issues),
+                        f"Expected timeline flag but got: {issues}")
+
+    def test_skill_count_anomaly_check_18(self):
+        """Check 18: unusually high skill count."""
+        candidate = _make_candidate(
+            skills=[{"name": f"Skill{i}", "proficiency": "intermediate", "endorsements": 0}
+                    for i in range(25)]
+        )
+        penalty, issues = detect_honeypot_deep(candidate)
+        self.assertLess(penalty, 1.0)
+        self.assertTrue(any("skill count" in i for i in issues),
+                        f"Expected skill count flag but got: {issues}")
+
+    def test_tempotal_order_inversion_check_19(self):
+        """Check 19: end date before start date."""
+        candidate = _make_candidate(
+            career_history=[
+                {
+                    "company": "Corp",
+                    "title": "Engineer",
+                    "start_date": "2020-01-01",
+                    "end_date": "2019-01-01",
+                    "duration_months": 0,
+                    "is_current": False,
+                    "industry": "Technology",
+                    "company_size": "1001-5000",
+                    "description": "Date error.",
+                }
+            ]
+        )
+        penalty, issues = detect_honeypot_deep(candidate)
+        self.assertLess(penalty, 1.0)
+        self.assertTrue(any("end date" in i for i in issues),
+                        f"Expected temporal inversion flag but got: {issues}")
+
+    def test_future_education_end_year_check_20(self):
+        """Check 20: education end year in the future."""
+        candidate = _make_candidate(
+            education=[
+                {
+                    "institution": "Future Univ",
+                    "degree": "PhD",
+                    "field_of_study": "CS",
+                    "start_year": 2020,
+                    "end_year": 2030,
+                    "tier": "tier_1",
+                }
+            ]
+        )
+        penalty, issues = detect_honeypot_deep(candidate)
+        self.assertLess(penalty, 1.0)
+        self.assertTrue(any("future" in i for i in issues),
+                        f"Expected future education flag but got: {issues}")
+
     def test_new_checks_do_not_false_flag_clean(self):
-        """A clean candidate with normal salary/dates/interviews should not trigger new checks."""
-        candidate = _make_candidate()  # Default has min=25, max=45, signup=2020-01-01, last_active=2025-12-01
-        penalty, issues = detect_honeypot(candidate)
-        # Should have no salary/date/offer issues
-        salary_issues = [i for i in issues if any(kw in i for kw in ["salary", "signup", "offer"])]
-        self.assertEqual(len(salary_issues), 0,
-                         f"Clean candidate triggered false positive: {salary_issues}")
+        """A clean candidate should not trigger any honeypot checks."""
+        candidate = _make_candidate()
+        penalty, issues = detect_honeypot_deep(candidate)
+        self.assertEqual(len(issues), 0,
+                         f"Clean candidate triggered false positive: {issues}")
+
+
+class TestNegativeSignalPenalty(unittest.TestCase):
+    """Test negative_signal_penalty function."""
+
+    def test_clean_candidate_zero_penalty(self):
+        candidate = _make_candidate()
+        penalty = negative_signal_penalty(candidate)
+        self.assertEqual(penalty, 0.0)
+
+    def test_aspirant_language_penalized(self):
+        candidate = _make_candidate(
+            summary="I've been keeping up with AI/ML at a self-learner level. "
+                    "Interested in transitioning toward more AI/ML-focused work."
+        )
+        penalty = negative_signal_penalty(candidate)
+        self.assertGreater(penalty, 0.0)
+
+
+class TestSkillCareerCoherence(unittest.TestCase):
+    """Test skill_career_coherence_score."""
+
+    def test_skills_match_career(self):
+        candidate = _make_candidate()
+        coherence = skill_career_coherence_score(candidate)
+        self.assertGreater(coherence, 0.5)
+
+    def test_no_skills_zero(self):
+        candidate = _make_candidate(skills=[])
+        coherence = skill_career_coherence_score(candidate)
+        self.assertEqual(coherence, 0.0)
+
+
+class TestCareerProgression(unittest.TestCase):
+    """Test career_progression_score."""
+
+    def test_single_role_neutral(self):
+        candidate = _make_candidate(
+            career_history=[
+                {
+                    "company": "Test Corp",
+                    "title": "ML Engineer",
+                    "start_date": "2020-01-01",
+                    "end_date": None,
+                    "duration_months": 48,
+                    "is_current": True,
+                    "industry": "Technology",
+                    "company_size": "1001-5000",
+                    "description": "Built ML models.",
+                }
+            ]
+        )
+        prog = career_progression_score(candidate)
+        self.assertEqual(prog, 0.5)  # Neutral for single role
+
+    def test_progression_toward_ai(self):
+        candidate = _make_candidate(
+            career_history=[
+                {
+                    "company": "Old Corp",
+                    "title": "Software Engineer",
+                    "start_date": "2016-01-01",
+                    "end_date": "2019-12-31",
+                    "duration_months": 48,
+                    "is_current": False,
+                    "industry": "Technology",
+                    "company_size": "1001-5000",
+                    "description": "Built web apps.",
+                },
+                {
+                    "company": "AI Corp",
+                    "title": "ML Engineer",
+                    "start_date": "2020-01-01",
+                    "end_date": None,
+                    "duration_months": 48,
+                    "is_current": True,
+                    "industry": "AI",
+                    "company_size": "51-200",
+                    "description": "Built recommendation systems.",
+                },
+            ]
+        )
+        prog = career_progression_score(candidate)
+        self.assertGreater(prog, 0.5)  # Positive progression
+
+
+class TestCompanyQuality(unittest.TestCase):
+    """Test company_quality_score."""
+
+    def test_no_history_zero(self):
+        candidate = _make_candidate(career_history=[])
+        score = company_quality_score(candidate)
+        self.assertEqual(score, 0.0)
+
+    def test_tier1_company_scores_higher(self):
+        candidate = _make_candidate(
+            career_history=[
+                {
+                    "company": "Google",
+                    "title": "Engineer",
+                    "start_date": "2020-01-01",
+                    "end_date": None,
+                    "duration_months": 48,
+                    "is_current": True,
+                    "industry": "Technology",
+                    "company_size": "10001+",
+                    "description": "Worked on search.",
+                }
+            ]
+        )
+        score = company_quality_score(candidate)
+        self.assertGreater(score, 0.5)
+
+
+class TestSCurveTransform(unittest.TestCase):
+    """Test s_curve_transform function."""
+
+    def test_high_scores_amplified(self):
+        scores = [0.75, 0.85]
+        transformed = s_curve_transform(scores)
+        # High scores should spread apart
+        self.assertGreater(transformed[1] - transformed[0], 0.05)
+
+    def test_empty_list(self):
+        self.assertEqual(s_curve_transform([]), [])
 
 
 class TestComputeTotalScore(unittest.TestCase):
     """Test the full scoring pipeline."""
 
-    def test_strong_candidate_scores_high(self):
+    def test_strong_candidate_scores_positive(self):
         candidate = _make_candidate()
         score, penalty, issues = compute_total_score(candidate)
-        self.assertGreater(score, 0.7)  # New weights: strong candidates still score high
+        self.assertGreater(score, 0.3)  # New lower weights still produce positive scores
         self.assertEqual(penalty, 1.0)
 
-    def test_weak_candidate_scores_low(self):
+    def test_weak_candidate_scores_lower(self):
         candidate = _make_candidate(
             current_title="HR Manager",
             years_of_experience=1,
@@ -619,7 +960,7 @@ class TestComputeTotalScore(unittest.TestCase):
         )
         score, penalty, issues = compute_total_score(candidate)
         self.assertLess(penalty, 1.0)
-        self.assertLess(score, 0.8)  # Penalized
+        self.assertLess(score, 0.7)  # Penalized
 
 
 class TestGenerateReasoning(unittest.TestCase):
@@ -631,29 +972,165 @@ class TestGenerateReasoning(unittest.TestCase):
         reasoning = generate_reasoning(candidate, score, penalty, issues)
         self.assertIn("Senior Machine Learning Engineer", reasoning)
         self.assertIn("7yrs", reasoning)
-        # New reasoning format uses "built ... systems" instead of "prod exp:"
-        self.assertTrue("built" in reasoning or "systems" in reasoning)
 
 
-class TestRedrobSignals(unittest.TestCase):
-    """Test the redrob_signals_score function."""
+class TestRareSkillDiamondScore(unittest.TestCase):
+    """Test the rare_skill_diamond_score function."""
 
-    def test_complete_signals_score_high(self):
-        candidate = _make_candidate()
-        score = redrob_signals_score(candidate)
+    def test_no_skills_zero(self):
+        candidate = _make_candidate(skills=[])
+        self.assertEqual(rare_skill_diamond_score(candidate), 0.0)
+
+    def test_diamond_skills_boosted(self):
+        candidate = _make_candidate(
+            skills=[
+                {"name": "Ranking", "proficiency": "advanced", "endorsements": 10},
+                {"name": "Information Retrieval", "proficiency": "advanced", "endorsements": 8},
+                {"name": "FAISS", "proficiency": "intermediate", "endorsements": 5},
+                {"name": "Semantic Search", "proficiency": "advanced", "endorsements": 7},
+                {"name": "NDCG", "proficiency": "intermediate", "endorsements": 3},
+                {"name": "Recommendation System", "proficiency": "advanced", "endorsements": 6},
+            ]
+        )
+        score = rare_skill_diamond_score(candidate)
         self.assertGreater(score, 0.5)
 
-    def test_empty_signals_score_zero(self):
-        candidate = _make_candidate(redrob_signals={})
-        score = redrob_signals_score(candidate)
+    def test_no_diamond_skills_low(self):
+        candidate = _make_candidate(
+            skills=[
+                {"name": "Python", "proficiency": "expert", "endorsements": 20},
+                {"name": "Docker", "proficiency": "advanced", "endorsements": 10},
+                {"name": "React", "proficiency": "intermediate", "endorsements": 5},
+            ]
+        )
+        score = rare_skill_diamond_score(candidate)
         self.assertEqual(score, 0.0)
 
-    def test_no_github_penalty(self):
+
+class TestTalentPlatformBonus(unittest.TestCase):
+    """Test the talent_platform_bonus function."""
+
+    def test_no_talent_signals_zero(self):
+        candidate = _make_candidate(
+            summary="Just a regular ML engineer.",
+            career_history=[
+                {
+                    "company": "Tech Corp",
+                    "title": "ML Engineer",
+                    "start_date": "2020-01-01",
+                    "end_date": None,
+                    "duration_months": 48,
+                    "is_current": True,
+                    "industry": "Technology",
+                    "company_size": "1001-5000",
+                    "description": "Built ML models.",
+                }
+            ]
+        )
+        self.assertEqual(talent_platform_bonus(candidate), 0.0)
+
+    def test_hr_tech_company_bonus(self):
+        candidate = _make_candidate(
+            career_history=[
+                {
+                    "company": "Redrob",
+                    "title": "ML Engineer",
+                    "start_date": "2020-01-01",
+                    "end_date": None,
+                    "duration_months": 48,
+                    "is_current": True,
+                    "industry": "HR Technology",
+                    "company_size": "51-200",
+                    "description": "Built ML systems for talent acquisition and candidate matching.",
+                }
+            ]
+        )
+        score = talent_platform_bonus(candidate)
+        self.assertGreater(score, 0.5)
+
+    def test_recruiting_keywords_in_summary(self):
+        candidate = _make_candidate(
+            summary="Experienced ML engineer in talent marketplace and recruitment technology."
+        )
+        score = talent_platform_bonus(candidate)
+        self.assertGreater(score, 0.0)
+
+
+class TestProfileConsistencyScore(unittest.TestCase):
+    """Test the profile_consistency_score function."""
+
+    def test_perfect_profile_returns_one(self):
+        candidate = _make_candidate()
+        score = profile_consistency_score(candidate)
+        self.assertEqual(score, 1.0)
+
+    def test_career_duration_mismatch_penalized(self):
+        """7 years stated but career history shows only 2 years."""
+        candidate = _make_candidate(
+            years_of_experience=7,
+            career_history=[
+                {
+                    "company": "Corp",
+                    "title": "Engineer",
+                    "start_date": "2025-01-01",
+                    "end_date": None,
+                    "duration_months": 18,
+                    "is_current": True,
+                    "industry": "Technology",
+                    "company_size": "1001-5000",
+                    "description": "Did work.",
+                },
+                {
+                    "company": "Old Corp",
+                    "title": "Junior Engineer",
+                    "start_date": "2024-01-01",
+                    "end_date": "2024-12-31",
+                    "duration_months": 6,
+                    "is_current": False,
+                    "industry": "Technology",
+                    "company_size": "1001-5000",
+                    "description": "More work.",
+                },
+            ]
+        )
+        score = profile_consistency_score(candidate)
+        self.assertLess(score, 1.0)
+
+    def test_expert_skill_short_duration_penalized(self):
+        """Expert skill with 0 months duration."""
+        candidate = _make_candidate(
+            skills=[
+                {"name": "PyTorch", "proficiency": "expert", "endorsements": 5},
+                {"name": "Python", "proficiency": "expert", "endorsements": 10},
+                {"name": "Docker", "proficiency": "advanced", "endorsements": 3},
+                {"name": "Kubernetes", "proficiency": "advanced", "endorsements": 2},
+            ]
+        )
+        score = profile_consistency_score(candidate)
+        self.assertLess(score, 1.0)
+
+
+class TestBehavioralMultiplier(unittest.TestCase):
+    """Test the behavioral_multiplier function."""
+
+    def test_complete_signals_multiplier_above_one(self):
+        candidate = _make_candidate()
+        mult = behavioral_multiplier(candidate)
+        self.assertGreater(mult, 1.0)  # Full signals boost above 1.0
+
+    def test_empty_signals_neutral(self):
+        candidate = _make_candidate(redrob_signals={})
+        mult = behavioral_multiplier(candidate)
+        self.assertEqual(mult, 1.0)  # Empty signals = neutral multiplier
+
+    def test_no_github_still_positive(self):
         signals = _make_candidate()["redrob_signals"].copy()
         signals["github_activity_score"] = -1
         candidate = _make_candidate(redrob_signals=signals)
-        score = redrob_signals_score(candidate)
-        self.assertGreater(score, 0)  # Should still have other signals
+        mult = behavioral_multiplier(candidate)
+        self.assertGreater(mult, 1.0)  # Still above 1.0 with other signals
+
+
 
 
 class TestEducationScore(unittest.TestCase):

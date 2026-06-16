@@ -55,18 +55,22 @@ aI_usage_summary: |
 # Approach summary
 # ============================================================
 methodology_summary: |
-  10-component rule-based ranker. Career history relevance (35%) is the
-  primary signal; role relevance (20%) surfaces AI/ML titles; production AI
-  evidence (14%) scores ML deployment experience; retrieval & ranking
-  experience (10%) is a dedicated component for the JD's #1 ask;
-  behavioral signals (10%) weights recruiter response rate, GitHub activity,
-  and platform engagement; experience fit (5%), skills (3%), education (3%)
-  with location (+3%) and notice period (+2%) bonuses. 8 honeypot detection
-  checks: timeline inconsistency, overlapping education, AI skills without
-  background, short descriptions, job-hopping, summary mismatch, career
-  exceeds stated experience, endorsement mismatch. Scores use exponential
-  normalization and min-heap Top-K selection. Runs 100K candidates in ~92s
-  on CPU. 34 unit tests. 0 honeypots in top 100.
+  Multi-stage ranking pipeline v3.0 with 3 phases: (1) TF-IDF semantic
+  matcher building and fast-filter of all 100K candidates to top 500 using
+  cheap features; (2) deep analysis with full 9-dimensional scoring,
+  negative signal detection, behavioral multiplier, and 20 honeypot checks;
+  (3) final polish with S-curve NDCG@10 optimization and generative
+  reasoning. Key innovations: TF-IDF replaces keyword counting (sublinear_tf
+  reduces stuffer advantage), behavioral signals changed from additive to
+  multiplicative (0.80x-1.15x) to prevent non-engineers from outranking real
+  engineers, career progression trajectory scoring, skill-career coherence
+  cross-referencing, company quality tiers, 20 honeypot checks including
+  fictional company detection, keyword density anomaly, ghost score,
+  temporal inversions. Weights optimized for NDCG: career_relevance=0.35,
+  role_relevance=0.18, retrieval_ranking=0.11, production_ai=0.14, plus
+  progression, coherence, company quality bonuses and negative signal
+  penalties. Pipeline completes 100K candidates in ~79s (CPU-only).
+  50 unit tests. 0 honeypots in top 100.
 
 # ============================================================
 # Declarations

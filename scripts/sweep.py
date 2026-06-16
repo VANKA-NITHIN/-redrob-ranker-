@@ -8,7 +8,7 @@ import sys
 import itertools
 import time
 
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from ranker import compute_total_score, process_candidates
 
@@ -22,25 +22,26 @@ def load_samples():
 
 # Define weight configurations to test
 SWEEP_CONFIGS = [
-    # (career, prod_ai, role, behavioral, experience, skills, education)
-    # Baseline
-    (0.38, 0.18, 0.17, 0.12, 0.08, 0.02, 0.05),
-    # More career-focused
-    (0.40, 0.18, 0.17, 0.10, 0.08, 0.02, 0.05),
-    (0.42, 0.18, 0.15, 0.10, 0.08, 0.02, 0.05),
-    # More production AI focused
-    (0.35, 0.22, 0.17, 0.11, 0.08, 0.02, 0.05),
-    (0.35, 0.20, 0.17, 0.13, 0.08, 0.02, 0.05),
-    # More role relevance focused
-    (0.35, 0.18, 0.20, 0.12, 0.08, 0.02, 0.05),
-    (0.36, 0.18, 0.19, 0.12, 0.08, 0.02, 0.05),
-    # More behavioral focused
-    (0.35, 0.17, 0.15, 0.16, 0.10, 0.02, 0.05),
-    # More experience focused
-    (0.35, 0.17, 0.15, 0.12, 0.12, 0.02, 0.07),
-    # Even lower skills
-    (0.38, 0.19, 0.17, 0.12, 0.08, 0.01, 0.05),
-    (0.39, 0.19, 0.17, 0.11, 0.08, 0.01, 0.05),
+    # (career, role, prod_ai, retrieval_ranking, behavioral, experience, skills, education, location, notice)
+    # Total must sum to ~1.0 (location & notice are bonuses on top)
+    #
+    # Current config (baseline)
+    (35, 20, 14, 10, 10, 5, 3, 3, 3, 2),
+    # Career-heavy: prioritize title/industry match
+    (38, 18, 14, 10, 9, 4, 2, 2, 2, 1),
+    (40, 17, 13, 10, 9, 4, 2, 2, 2, 1),
+    # Role-heavy: surface AI titles aggressively
+    (33, 24, 13, 10, 9, 4, 2, 2, 2, 1),
+    (32, 25, 13, 10, 9, 4, 2, 2, 2, 1),
+    # Prod-AI heavy: favor production ML experience
+    (33, 18, 18, 12, 9, 4, 2, 2, 1, 1),
+    (32, 17, 20, 12, 9, 4, 2, 2, 1, 1),
+    # Retrieval-Ranking heavy: JD's #1 ask
+    (33, 18, 12, 15, 10, 4, 3, 3, 2, 2),
+    (31, 17, 12, 17, 10, 4, 3, 3, 2, 1),
+    # Balanced 
+    (34, 19, 14, 11, 10, 4, 3, 3, 2, 2),
+    (35, 18, 14, 11, 10, 5, 3, 3, 2, 1),
 ]
 
 
@@ -56,19 +57,20 @@ def run_sweep():
     results = []
 
     for i, config in enumerate(SWEEP_CONFIGS):
-        career_w, prod_ai_w, role_w, behav_w, exp_w, skills_w, edu_w = config
-        label = f"Cfg{i+1}: C={career_w:.2f} P={prod_ai_w:.2f} R={role_w:.2f} B={behav_w:.2f} E={exp_w:.2f} S={skills_w:.2f} Ed={edu_w:.2f}"
+        (career_w, role_w, prod_ai_w, rr_w, behav_w, exp_w, skills_w, edu_w, loc_w, notice_w) = config
+        label = f"Cfg{i+1}: Cr={career_w} Ro={role_w} Pr={prod_ai_w} RR={rr_w} Bh={behav_w} Ex={exp_w} Sk={skills_w} Ed={edu_w} Lc={loc_w} Nt={notice_w}"
 
-        # Monkey-patch weights for this run
+        # Monkey-patch weights for this run (convert from integer % to decimal)
         import config as cfg
         orig_weights = cfg.WEIGHTS.copy()
-        cfg.WEIGHTS["career_relevance"] = career_w
-        cfg.WEIGHTS["production_ai_evidence"] = prod_ai_w
-        cfg.WEIGHTS["role_relevance"] = role_w
-        cfg.WEIGHTS["behavioral_signals"] = behav_w
-        cfg.WEIGHTS["experience_fit"] = exp_w
-        cfg.WEIGHTS["skills_match"] = skills_w
-        cfg.WEIGHTS["education_score"] = edu_w
+        cfg.WEIGHTS["career_relevance"] = career_w / 100
+        cfg.WEIGHTS["role_relevance"] = role_w / 100
+        cfg.WEIGHTS["production_ai_evidence"] = prod_ai_w / 100
+        cfg.WEIGHTS["retrieval_ranking_experience"] = rr_w / 100
+        cfg.WEIGHTS["behavioral_signals"] = behav_w / 100
+        cfg.WEIGHTS["experience_fit"] = exp_w / 100
+        cfg.WEIGHTS["skills_match"] = skills_w / 100
+        cfg.WEIGHTS["education_score"] = edu_w / 100
 
         start = time.time()
         heap_sorted = process_candidates(samples)
