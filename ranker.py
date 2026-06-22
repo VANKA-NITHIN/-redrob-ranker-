@@ -148,6 +148,8 @@ def build_candidate_text(candidate):
     importance to what the candidate is doing NOW vs. 5+ years ago.
     """
     profile = candidate.get("profile", {})
+    if not isinstance(profile, dict):
+        profile = {}
     parts = []
     
     # Summary (full weight)
@@ -160,36 +162,41 @@ def build_candidate_text(candidate):
     
     # Career descriptions (truncated to 250 chars each to speed up TF-IDF transform)
     current_role_text = None
-    for job in candidate.get("career_history", []):
-        desc = (job.get("description", "") or "")[:250]
-        title = job.get("title", "") or ""
-        industry = job.get("industry", "") or ""
-        job_text = f"{title} {desc} {industry}"
-        parts.append(job_text)
-        
-        # Save current role text for recency boosting
-        if job.get("is_current", False):
-            current_role_text = job_text
+    career_history = candidate.get("career_history", [])
+    if isinstance(career_history, list):
+        for job in career_history:
+            if not isinstance(job, dict):
+                continue
+            desc = (job.get("description", "") or "")[:250]
+            title = job.get("title", "") or ""
+            industry = job.get("industry", "") or ""
+            job_text = f"{title} {desc} {industry}"
+            parts.append(job_text)
+            
+            # Save current role text for recency boosting
+            if job.get("is_current", False):
+                current_role_text = job_text
     
     # Recency boost: repeat current role text 3x for higher TF weight
     if current_role_text:
         parts.append(current_role_text)  # 2nd occurrence
         parts.append(current_role_text)  # 3rd occurrence
-    elif len(candidate.get("career_history", [])) > 0:
+    elif isinstance(career_history, list) and len(career_history) > 0:
         # No current role — repeat the most recent role
-        most_recent = candidate["career_history"][0]
-        desc = (most_recent.get("description", "") or "")[:250]
-        title = most_recent.get("title", "") or ""
-        industry = most_recent.get("industry", "") or ""
-        recent_text = f"{title} {desc} {industry}"
-        parts.append(recent_text)
-        parts.append(recent_text)
+        most_recent = career_history[0]
+        if isinstance(most_recent, dict):
+            desc = (most_recent.get("description", "") or "")[:250]
+            title = most_recent.get("title", "") or ""
+            industry = most_recent.get("industry", "") or ""
+            recent_text = f"{title} {desc} {industry}"
+            parts.append(recent_text)
+            parts.append(recent_text)
     
     # Current title
     curr_title = profile.get("current_title", "") or ""
     parts.append(curr_title)
     
-    return " ".join(parts)
+    return " ".join(parts).strip()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -228,6 +235,8 @@ def production_ai_evidence_score(candidate):
     """Score evidence of building production AI/ranking/search/recommendation systems."""
     history = candidate.get("career_history", [])
     profile = candidate.get("profile", {})
+    if not isinstance(profile, dict):
+        profile = {}
     score = 0.0
     
     for job in history:
@@ -243,7 +252,12 @@ def production_ai_evidence_score(candidate):
     score += summary_matches * 0.2
     
     skills = candidate.get("skills", [])
-    skill_names = set(s["name"] for s in skills)
+    skill_names = set()
+    for s in skills:
+        if isinstance(s, dict):
+            name = s.get("name")
+            if name:
+                skill_names.add(name)
     prod_skills = {"PyTorch", "TensorFlow", "Transformers", "MLflow",
                     "Weights & Biases", "WandB", "Docker", "Kubernetes",
                     "AWS", "GCP", "Azure", "Airflow", "Spark",
@@ -259,6 +273,8 @@ def retrieval_ranking_experience_score(candidate):
     """Dedicated scoring for retrieval, ranking, search, and recommendation systems."""
     history = candidate.get("career_history", [])
     profile = candidate.get("profile", {})
+    if not isinstance(profile, dict):
+        profile = {}
     score = 0.0
     
     for job in history:
@@ -286,7 +302,12 @@ def retrieval_ranking_experience_score(candidate):
     score += summary_matches * 0.5
     
     skills = candidate.get("skills", [])
-    skill_names = set(s["name"] for s in skills)
+    skill_names = set()
+    for s in skills:
+        if isinstance(s, dict):
+            name = s.get("name")
+            if name:
+                skill_names.add(name)
     rr_skill_count = len(skill_names & RR_SPECIFIC_SKILLS)
     score += rr_skill_count * 0.8
     
@@ -296,6 +317,8 @@ def retrieval_ranking_experience_score(candidate):
 def location_preference_score(candidate):
     """Score location match against JD preferences."""
     profile = candidate.get("profile", {})
+    if not isinstance(profile, dict):
+        profile = {}
     location = (profile.get("location") or "").lower()
     country = (profile.get("country") or "").lower()
     signals = candidate.get("redrob_signals", {})
@@ -392,6 +415,8 @@ def career_history_score(candidate):
 def role_relevance_score(candidate):
     """Score current role for direct relevance to Senior AI Engineer."""
     profile = candidate.get("profile", {})
+    if not isinstance(profile, dict):
+        profile = {}
     title = profile.get("current_title", "") or ""
     headline = profile.get("headline", "") or ""
     score = _title_tier_score(title)
@@ -411,12 +436,17 @@ def skills_match_score(candidate):
     if not skills:
         return 0.0
     score = 0.0
-    skill_names = set(s["name"] for s in skills)
+    try:
+        skill_names = set(s["name"] for s in skills if isinstance(s, dict))
+    except (TypeError, KeyError):
+        skill_names = set()
     
     for s in skills:
-        name = s["name"]
-        prof = s.get("proficiency", "beginner")
-        endorsements = s.get("endorsements", 0)
+        if not isinstance(s, dict):
+            continue
+        name = s.get("name", "")
+        prof = s.get("proficiency", "beginner") or "beginner"
+        endorsements = s.get("endorsements") or 0
         prof_mult = {"beginner": 0.5, "intermediate": 1.0, "advanced": 1.5, "expert": 2.0}.get(prof, 1.0)
         end_mult = 1 + min(endorsements, 30) / 100
         
@@ -432,6 +462,14 @@ def skills_match_score(candidate):
 
 def experience_fit_score(years):
     """Score years of experience. Peak at 5-9 years, ideal at 7."""
+    if years is None:
+        return 0.0
+    try:
+        years = float(years)
+    except (ValueError, TypeError):
+        return 0.0
+    if math.isnan(years) or math.isinf(years):
+        return 0.0
     if years <= 0:
         return 0.0
     if years < 2:
@@ -523,6 +561,8 @@ def negative_signal_penalty(candidate):
     """
     history = candidate.get("career_history", [])
     profile = candidate.get("profile", {})
+    if not isinstance(profile, dict):
+        profile = {}
     summary = (profile.get("summary") or "").lower()
     penalty = 0.0
     
@@ -618,8 +658,10 @@ def skill_career_coherence_score(candidate):
     matched = 0
     total = 0
     for s in skills:
-        name = s["name"].lower()
-        prof = s.get("proficiency", "beginner")
+        name_raw = s["name"] if isinstance(s, dict) else None
+        if not name_raw:
+            continue
+        name = name_raw.lower()
         
         # Only check substantive skills (skip obvious ones like "Excel", "PowerPoint")
         if name in {"excel", "powerpoint", "photoshop", "seo", "content writing", "sales", "accounting"}:
@@ -658,7 +700,12 @@ def skill_career_coherence_score(candidate):
     coherence = matched / total
     
     # Bonus: if RR-specific skills are all matched, extra signal
-    rr_skill_names = set(s["name"] for s in skills if s["name"] in RR_SPECIFIC_SKILLS)
+    rr_skill_names = set()
+    for s in skills:
+        if isinstance(s, dict):
+            sn = s.get("name")
+            if sn and sn in RR_SPECIFIC_SKILLS:
+                rr_skill_names.add(sn)
     if rr_skill_names:
         rr_matched = sum(1 for rn in rr_skill_names if rn.lower() in all_text)
         rr_ratio = rr_matched / len(rr_skill_names)
@@ -830,6 +877,8 @@ def talent_platform_bonus(candidate):
     """
     history = candidate.get("career_history", [])
     profile = candidate.get("profile", {})
+    if not isinstance(profile, dict):
+        profile = {}
     max_score = 0.0
     
     # Check career descriptions and industries
@@ -880,9 +929,17 @@ def profile_consistency_score(candidate):
     Used as a multiplier on the final score, not additive.
     """
     profile = candidate.get("profile", {})
+    if not isinstance(profile, dict):
+        profile = {}
     history = candidate.get("career_history", [])
+    if not isinstance(history, list):
+        history = []
     skills = candidate.get("skills", [])
+    if not isinstance(skills, list):
+        skills = []
     edus = candidate.get("education", [])
+    if not isinstance(edus, list):
+        edus = []
     
     score = 1.0  # Start perfect, deduct for inconsistencies
     
@@ -906,6 +963,8 @@ def profile_consistency_score(candidate):
     if skills:
         anomalies = 0
         for s in skills:
+            if not isinstance(s, dict):
+                continue
             prof = s.get("proficiency", "beginner")
             duration = s.get("duration_months", 0) or 0
             # Expert-level skill with < 6 months experience = suspicious
@@ -976,40 +1035,47 @@ def behavioral_multiplier(candidate):
     
     raw = 0.0
     
+    # Helper to safely get numeric signal value
+    def _sig(key, default=0):
+        val = signals.get(key, default)
+        if val is None:
+            return default
+        return val
+    
     # Profile completeness (0-100 -> 0-0.10)
-    completeness = signals.get("profile_completeness_score", 0)
+    completeness = _sig("profile_completeness_score", 0)
     raw += (completeness / 100) * 0.10
     
     # Recruiter response rate (0-1 -> 0-0.20)
-    resp_rate = signals.get("recruiter_response_rate", 0)
+    resp_rate = _sig("recruiter_response_rate", 0)
     if resp_rate >= 0:
         raw += resp_rate * 0.20
     
     # Interview completion rate (0-1 -> 0-0.15)
-    interview_rate = signals.get("interview_completion_rate", 0)
+    interview_rate = _sig("interview_completion_rate", 0)
     if interview_rate >= 0:
         raw += interview_rate * 0.15
     
     # Search appearance
-    search_app = signals.get("search_appearance_30d", 0)
+    search_app = _sig("search_appearance_30d", 0)
     raw += min(search_app / 200, 1.0) * 0.10
     
     # Saved by recruiters
-    saved = signals.get("saved_by_recruiters_30d", 0)
+    saved = _sig("saved_by_recruiters_30d", 0)
     raw += min(saved / 20, 1.0) * 0.15
     
     # GitHub activity
-    github = signals.get("github_activity_score", -1)
+    github = _sig("github_activity_score", -1)
     if github >= 0:
         raw += (github / 100) * 0.10
     
     # Connections
-    connections = signals.get("connection_count", 0)
+    connections = _sig("connection_count", 0)
     raw += min(connections / 500, 1.0) * 0.05
     
     # Endorsements
-    endorsements = signals.get("endorsements_received", 0)
-    raw += min(endorsements / 50, 1.0) * 0.05
+    endorsements_val = _sig("endorsements_received", 0)
+    raw += min(endorsements_val / 50, 1.0) * 0.05
     
     # Basic signals
     if signals.get("open_to_work_flag", False):
@@ -1022,7 +1088,7 @@ def behavioral_multiplier(candidate):
         raw += 0.05
     
     # Notice period signal
-    notice = signals.get("notice_period_days", 90)
+    notice = _sig("notice_period_days", 90)
     if notice <= 30:
         raw += 0.05
     elif notice <= 60:
@@ -1057,6 +1123,8 @@ def latent_role_classifier(candidate):
     """
     history = candidate.get("career_history", [])
     profile = candidate.get("profile", {})
+    if not isinstance(profile, dict):
+        profile = {}
     skills = candidate.get("skills", [])
     
     # Build unified text from all career descriptions
@@ -1071,7 +1139,12 @@ def latent_role_classifier(candidate):
     
     # Combine all candidate text
     all_text = " ".join([all_desc, summary, headline, current_title])
-    skill_names = set(s["name"].lower() for s in skills)
+    skill_names = set()
+    for s in skills:
+        if isinstance(s, dict):
+            name = s.get("name")
+            if name:
+                skill_names.add(name.lower())
     
     # Score each latent role type
     roles = {}
@@ -1161,29 +1234,37 @@ def recruiter_attractiveness_score(candidate):
     that directly correlates with recruiter judgment.
     """
     signals = candidate.get("redrob_signals", {})
+    if not isinstance(signals, dict):
+        return 0.0
     if not signals:
         return 0.0
     
+    def _safe_signal(key, default=0):
+        val = signals.get(key, default)
+        if val is None:
+            return default
+        return val
+    
     # --- Direct Recruiter Validation (highest weight) ---
     # A candidate saved by many recruiters is almost certainly high-quality
-    saved = signals.get("saved_by_recruiters_30d", 0) or 0
+    saved = _safe_signal("saved_by_recruiters_30d", 0)
     saved_score = 1.0 - math.exp(-saved / 8)  # Soft cap: 8 saves = ~63% boost
     
     # Search appearance = recruiter demand signal
-    search_app = signals.get("search_appearance_30d", 0) or 0
+    search_app = _safe_signal("search_appearance_30d", 0)
     search_score = 1.0 - math.exp(-search_app / 150)  # Soft cap: 150 appearances
     
     # --- Engagement Signals ---
     # Response rate: recruiters are more likely to contact responsive candidates
-    resp_rate = signals.get("recruiter_response_rate", -1)
+    resp_rate = _safe_signal("recruiter_response_rate", -1)
     response_score = resp_rate if resp_rate >= 0 else 0.0
     
     # Interview completion rate: reliable, engaged candidates
-    interview_rate = signals.get("interview_completion_rate", -1)
+    interview_rate = _safe_signal("interview_completion_rate", -1)
     interview_score = interview_rate if interview_rate >= 0 else 0.0
     
     # Profile completeness: recruiter can see full picture
-    completeness = signals.get("profile_completeness_score", 0) or 0
+    completeness = _safe_signal("profile_completeness_score", 0)
     completeness_score = completeness / 100.0
     
     # --- Credibility Signals ---
@@ -1197,7 +1278,7 @@ def recruiter_attractiveness_score(candidate):
         verified_score += 0.05
     
     # GitHub activity = technical credibility
-    github = signals.get("github_activity_score", -1)
+    github = _safe_signal("github_activity_score", -1)
     github_score = (github / 100.0) if github >= 0 else 0.0
     
     # --- Composite Score ---
@@ -1234,7 +1315,11 @@ def startup_fit_score(candidate):
     Returns: 0.0 to 1.0 (higher = better startup fit)
     """
     history = candidate.get("career_history", [])
+    if not isinstance(history, list):
+        history = []
     profile = candidate.get("profile", {})
+    if not isinstance(profile, dict):
+        profile = {}
     signals = candidate.get("redrob_signals", {})
     
     if not history:
@@ -1329,6 +1414,8 @@ def continuous_honeypot_risk_score(candidate):
     Returns: (risk_score_0_to_1, anomaly_list)
     """
     profile = candidate.get("profile", {})
+    if not isinstance(profile, dict):
+        profile = {}
     history = candidate.get("career_history", [])
     skills = candidate.get("skills", [])
     signals = candidate.get("redrob_signals", {})
@@ -1349,6 +1436,11 @@ def continuous_honeypot_risk_score(candidate):
     # --- Statistical Anomaly 2: Experience Z-score ---
     # From EDA: mean exp=7.2, std~4.5
     years_exp = profile.get("years_of_experience", 0) or 0
+    if isinstance(years_exp, str):
+        try:
+            years_exp = float(years_exp)
+        except (ValueError, TypeError):
+            years_exp = 0
     z_exp = abs((years_exp - 7.2) / 4.5)
     if z_exp > STAT_ANOMALY_Z_SCORE:
         severity = min(1.0, (z_exp - STAT_ANOMALY_Z_SCORE) / 3.0)
@@ -1438,9 +1530,21 @@ def detect_honeypot_fast(candidate):
     penalty = 1.0
     issues = []
     profile = candidate.get("profile", {})
+    if not isinstance(profile, dict):
+        profile = {}
     signals = candidate.get("redrob_signals", {})
+    if not isinstance(signals, dict):
+        signals = {}
     history = candidate.get("career_history", [])
-    years_exp = profile.get("years_of_experience", 0)
+    if not isinstance(history, list):
+        history = []
+    years_exp = profile.get("years_of_experience", 0) or 0
+    # Ensure years_exp is numeric
+    if not isinstance(years_exp, (int, float)):
+        try:
+            years_exp = float(years_exp)
+        except (ValueError, TypeError):
+            years_exp = 0
     
     # Check 1: Timeline inconsistency (quick)
     edus = candidate.get("education", [])
@@ -1480,13 +1584,26 @@ def detect_honeypot_deep(candidate):
         return penalty, issues  # Already eliminated
     
     profile = candidate.get("profile", {})
+    if not isinstance(profile, dict):
+        profile = {}
     edus = candidate.get("education", [])
     skills = candidate.get("skills", [])
     history = candidate.get("career_history", [])
     signals = candidate.get("redrob_signals", {})
-    years_exp = profile.get("years_of_experience", 0)
+    years_exp = profile.get("years_of_experience", 0) or 0
+    # Ensure years_exp is numeric
+    if not isinstance(years_exp, (int, float)):
+        try:
+            years_exp = float(years_exp)
+        except (ValueError, TypeError):
+            years_exp = 0
     summary = (profile.get("summary") or "").lower()
-    skill_names = set(s["name"] for s in skills)
+    skill_names = set()
+    for s in skills:
+        if isinstance(s, dict):
+            name = s.get("name")
+            if name:
+                skill_names.add(name)
     
     # Check 4: Overlapping education at different institutions
     if len(edus) >= 2:
@@ -1520,7 +1637,7 @@ def detect_honeypot_deep(candidate):
             issues.append(f"suspicious: {ai_skill_overlap} AI skills but no AI edu/role")
     
     # Check 6: Skill endorsements vs skill count mismatch
-    high_endorsements = any(s.get("endorsements", 0) >= 50 for s in skills)
+    high_endorsements = any((s.get("endorsements") or 0) >= 50 for s in skills)
     low_skill_count = len(skills) <= 3
     if high_endorsements and low_skill_count:
         penalty *= 0.7
@@ -1594,8 +1711,10 @@ def detect_honeypot_deep(candidate):
             pass
     
     # Check 13: Offer acceptance without interviews
-    offer_rate = signals.get("offer_acceptance_rate", -1)
-    interview_rate = signals.get("interview_completion_rate", 0)
+    offer_rate = signals.get("offer_acceptance_rate")
+    if offer_rate is None:
+        offer_rate = -1
+    interview_rate = signals.get("interview_completion_rate", 0) or 0
     if offer_rate > 0.5 and interview_rate == 0:
         penalty *= 0.6
         issues.append(f"offer acceptance {offer_rate:.0%} but 0% interview completion")
@@ -1650,11 +1769,11 @@ def detect_honeypot_deep(candidate):
     
     # Check 17: No verifiable internet presence (ghost score)
     ghost_signals = 0
-    if signals.get("search_appearance_30d", 0) < 10:
+    if (signals.get("search_appearance_30d") or 0) < 10:
         ghost_signals += 1
-    if signals.get("saved_by_recruiters_30d", 0) == 0:
+    if (signals.get("saved_by_recruiters_30d") or 0) == 0:
         ghost_signals += 1
-    if signals.get("github_activity_score", -1) < 0:
+    if (signals.get("github_activity_score") or -1) < 0:
         ghost_signals += 1
     if not signals.get("verified_email", False):
         ghost_signals += 1
@@ -1708,6 +1827,8 @@ def compute_cheap_score(candidate, semantic_similarity):
     recruiter attractiveness signal (saved_by_recruiters is fast to compute).
     """
     profile = candidate.get("profile", {})
+    if not isinstance(profile, dict):
+        profile = {}
     years_exp = profile.get("years_of_experience", 0) or 0
     
     # Fast title tier
@@ -1762,7 +1883,15 @@ def compute_total_score(candidate):
     - Aggressive NDCG@10: Staged S-curve with tiered score separation
     """
     profile = candidate.get("profile", {})
+    if not isinstance(profile, dict):
+        profile = {}
     years_exp = profile.get("years_of_experience", 0) or 0
+    # Ensure years_exp is numeric
+    if not isinstance(years_exp, (int, float)):
+        try:
+            years_exp = float(years_exp)
+        except (ValueError, TypeError):
+            years_exp = 0
     
     # --- Core career signals ---
     career_score = career_history_score(candidate)
@@ -1931,6 +2060,8 @@ def generate_reasoning(candidate, score, hon_penalty, hon_issues):
     Includes v4.0 strategic signals.
     """
     profile = candidate.get("profile", {})
+    if not isinstance(profile, dict):
+        profile = {}
     title = profile.get("current_title", "")
     headline = profile.get("headline", "")
     years_exp = profile.get("years_of_experience", 0) or 0

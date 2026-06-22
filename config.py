@@ -342,7 +342,7 @@ FINAL_TOP_K = 100           # Stage 3: final submission size
 TFIDF_MAX_FEATURES = 5000       # Reduced: top 5000 features capture the most discriminative terms
 TFIDF_NGRAM_RANGE = (1, 2)       # Reduced from (1,3): bigrams are ~10x faster to fit
 TFIDF_MAX_DF = 0.8               # Increased to allow more common terms through
-TFIDF_MIN_DF = 3
+TFIDF_MIN_DF = 1       # 1 = appear in at least 1 doc (safe for both 20-sample and 100K-full runs)
 TFIDF_SAMPLE_SIZE = 20000        # Fit IDF on first 20K docs; estimates stabilize fast
 
 SCURVE_STEEPNESS = 10.0      # More aggressive: creates 0.20+ gaps at top for better NDCG@10
