@@ -1851,15 +1851,15 @@ def compute_total_score(candidate):
         exp_fit * WEIGHTS["experience_fit"] +
         skills_normalized * WEIGHTS["skills_match"] +
         edu_fit * WEIGHTS["education_score"] +
-        prog * 0.08 +                     # Career progression (slightly reduced)
+        prog * 0.07 +                     # Career progression
         coherence * 0.03 +                # Skill-career coherence
         company_qual * 0.03 +             # Company quality bonus
-        diamond * 0.05 +                  # Rare skill diamond (unicorn bonus)
+        diamond * 0.06 +                  # Rare skill diamond (unicorn bonus) — INCREASED to surface retrieval/ranking engineers
         talent * 0.03 +                   # Talent platform domain bonus
         (0.0 - neg_penalty * 0.06) +      # Negative signal penalty
-        latent_role * 0.08 +              # NEW: Latent role detection bonus
-        recruiter_attr * 0.06 +           # NEW: Recruiter attractiveness
-        startup * 0.05                    # NEW: Startup fit bonus
+        latent_role * 0.10 +              # Latent role detection bonus — INCREASED to surface search/ranking engineers
+        recruiter_attr * 0.06 +           # Recruiter attractiveness
+        startup * 0.06                    # Startup fit bonus — INCREASED for founding team compatibility
     )
     
     # --- Profile consistency multiplier ---

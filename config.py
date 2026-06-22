@@ -314,10 +314,10 @@ RELEVANT_FIELDS = [
 # =============================================================================
 
 WEIGHTS = {
-    "career_relevance": 0.35,               # Career history relevance (Cfg11 sweep optimum)
-    "role_relevance": 0.18,                 # Current title match to AI/ML
-    "production_ai_evidence": 0.14,          # General AI/ML production exp
-    "retrieval_ranking_experience": 0.15,    # JD's #1 specific ask (balanced: Cfg11 RR=11 vs original RR=18)
+    "career_relevance": 0.33,               # Career history relevance (JD-optimized: keeps career-first but slightly reduced)
+    "role_relevance": 0.16,                 # Current title match to AI/ML
+    "production_ai_evidence": 0.12,          # General AI/ML production exp (reduced to prevent CV engineers from dominating)
+    "retrieval_ranking_experience": 0.18,    # JD's #1 specific ask — INCREASED: surfaces search/ranking/retrieval engineers
     "experience_fit": 0.05,                  # Years of experience
     "skills_match": 0.03,                    # Minimal — EDA confirms trap
     "education_score": 0.03,                 # Minimal
