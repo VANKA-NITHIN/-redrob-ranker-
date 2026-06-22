@@ -589,5 +589,93 @@ class TestRobustnessForIndividualFunctions(unittest.TestCase):
         self.assertIsInstance(result, str)
 
 
+class TestRobustnessWithSyntheticData(unittest.TestCase):
+    """Test the ranker handles synthetic edge cases like those found during fuzz testing."""
+
+    def test_profile_consistency_string_years(self):
+        """profile_consistency_score with string years_of_experience (was crashing)."""
+        c = {
+            "candidate_id": "SYNTH_STR_YEARS",
+            "profile": {"years_of_experience": "seven", "current_title": "Engineer"},
+            "skills": [],
+            "education": [],
+            "career_history": [{"title": "Dev", "description": "text", "duration_months": 12}],
+            "redrob_signals": {}
+        }
+        try:
+            result = profile_consistency_score(c)
+            self.assertGreaterEqual(result, 0.5)
+        except Exception as e:
+            self.fail(f"profile_consistency_score with string years crashed: {e}")
+
+    def test_generate_reasoning_string_years(self):
+        """generate_reasoning with string years_of_experience (was crashing)."""
+        c = {
+            "candidate_id": "SYNTH_STR_YEARS2",
+            "profile": {"years_of_experience": "seven", "current_title": "Engineer"},
+            "skills": [],
+            "education": [],
+            "career_history": [],
+            "redrob_signals": {}
+        }
+        try:
+            result = generate_reasoning(c, 0.95, 1.0, [])
+            self.assertIsInstance(result, str)
+        except Exception as e:
+            self.fail(f"generate_reasoning with string years crashed: {e}")
+
+    def test_profile_consistency_negative_years(self):
+        """profile_consistency_score with negative years_of_experience."""
+        c = {
+            "candidate_id": "SYNTH_NEG_YEARS",
+            "profile": {"years_of_experience": -1, "current_title": "Dev"},
+            "skills": [],
+            "education": [],
+            "career_history": [{"title": "Dev", "description": "text", "duration_months": 12}],
+            "redrob_signals": {}
+        }
+        try:
+            result = profile_consistency_score(c)
+            self.assertGreaterEqual(result, 0.5)
+        except Exception as e:
+            self.fail(f"profile_consistency_score with negative years crashed: {e}")
+
+    def test_profile_consistency_zero_years(self):
+        """profile_consistency_score with zero years_of_experience."""
+        c = {
+            "candidate_id": "SYNTH_ZERO_YEARS",
+            "profile": {"years_of_experience": 0, "current_title": "Dev"},
+            "skills": [],
+            "education": [],
+            "career_history": [{"title": "Dev", "description": "text", "duration_months": 12}],
+            "redrob_signals": {}
+        }
+        try:
+            result = profile_consistency_score(c)
+            self.assertGreaterEqual(result, 0.5)
+        except Exception as e:
+            self.fail(f"profile_consistency_score with zero years crashed: {e}")
+
+    def test_pipeline_with_edge_cases(self):
+        """Full process_candidates with multiple edge-case candidates."""
+        candidates = [
+            {"candidate_id": "E1", "profile": {"years_of_experience": "seven", "current_title": "E"}, "skills": [], "education": [], "career_history": [], "redrob_signals": {}},
+            {"candidate_id": "E2", "profile": {"years_of_experience": None, "current_title": "E"}, "skills": [], "education": [], "career_history": [], "redrob_signals": {}},
+            {"candidate_id": "E3", "profile": ["not", "a", "dict"], "skills": [], "education": [], "career_history": [], "redrob_signals": {}},
+            {"candidate_id": "E4", "profile": {}, "skills": [], "education": [], "career_history": [], "redrob_signals": {}},
+            {"candidate_id": "E5", "profile": {"years_of_experience": 5, "current_title": "ML Engineer", "summary": "Built ranking systems"},
+             "skills": [{"name": "Python", "proficiency": "advanced", "endorsements": 5, "duration_months": 24}],
+             "education": [],
+             "career_history": [{"title": "ML Engineer", "description": "Built ranking systems", "company": "Co", "is_current": True, "duration_months": 24}],
+             "redrob_signals": {}},
+        ]
+        try:
+            results = process_candidates(candidates)
+            self.assertIsInstance(results, list)
+            self.assertLessEqual(len(results), len(candidates))
+        except Exception as e:
+            self.fail(f"Pipeline with edge cases crashed: {e}")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

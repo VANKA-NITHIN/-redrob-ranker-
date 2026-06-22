@@ -7,7 +7,8 @@ import type {
   HoneypotData,
 } from "@/types"
 
-const BASE_URL = "/api"
+// Point to the deployed backend API on HuggingFace
+const BASE_URL = "https://vankanithin-redrob-ranker.hf.space/api"
 
 async function fetchJSON<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`)
