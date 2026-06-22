@@ -2039,11 +2039,12 @@ def s_curve_transform(scores, steepness=SCURVE_STEEPNESS, midpoint=SCURVE_MIDPOI
     # Apply sigmoid transformation
     transformed = [1.0 / (1.0 + math.exp(-steepness * (s - midpoint))) for s in sorted_scores]
     
-    # Enforce minimum score gap between adjacent candidates (top-to-bottom)
-    # This prevents score ties and creates clean separation for NDCG
-    for i in range(len(transformed) - 1):
+    # Enforce minimum score gap between adjacent candidates (bottom-to-top)
+    # Bottom-up iteration prevents cascading new ties that top-down creates.
+    # When we push a score up, we only affect the pair above (already processed),
+    # never the pair below (yet to process). This guarantees all gaps are satisfied.
+    for i in range(len(transformed) - 2, -1, -1):
         if transformed[i] - transformed[i + 1] < MIN_SCORE_GAP:
-            # Push the higher score up to maintain the gap
             transformed[i] = transformed[i + 1] + MIN_SCORE_GAP
     
     # Restore original order
