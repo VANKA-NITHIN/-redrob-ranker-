@@ -945,10 +945,15 @@ def profile_consistency_score(candidate):
     
     # --- Check 1: Career history duration vs stated experience ---
     stated_years = profile.get("years_of_experience", 0) or 0
+    # Guard against non-numeric years_of_experience (e.g., string "seven")
+    if not isinstance(stated_years, (int, float)):
+        try:
+            stated_years = float(stated_years)
+        except (ValueError, TypeError):
+            stated_years = 0
     if history and len(history) >= 1 and stated_years > 0:
         total_career_months = sum(h.get("duration_months", 0) or 0 for h in history)
         total_career_years = total_career_months / 12
-        stated_years = profile.get("years_of_experience", 0) or 0
         
         if total_career_years > 0 and stated_years > 0:
             ratio = total_career_years / stated_years
@@ -2084,6 +2089,12 @@ def generate_reasoning(candidate, score, hon_penalty, hon_issues):
             parts.append(f"({'; '.join(hon_issues[:2])})")
     
     parts.append(f"{title}")
+    # Guard against non-numeric years_of_experience
+    if not isinstance(years_exp, (int, float)):
+        try:
+            years_exp = float(years_exp)
+        except (ValueError, TypeError):
+            years_exp = 0
     exp_str = f"{years_exp:.0f}yrs"
     if company:
         exp_str += f" at {company}"
