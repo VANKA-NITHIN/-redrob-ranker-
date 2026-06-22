@@ -15,15 +15,15 @@ import {
   Settings,
 } from "lucide-react"
 
-const DashboardPage = lazy(() => import("@/pages/dashboard-page"))
-const RankingsPage = lazy(() => import("@/pages/rankings-page"))
-const CandidateDetailPage = lazy(() => import("@/pages/candidate-detail-page"))
-const ComparisonPage = lazy(() => import("@/pages/comparison-page"))
-const AnalyticsPage = lazy(() => import("@/pages/analytics-page"))
-const ExplainabilityPage = lazy(() => import("@/pages/explainability/explainability-page"))
-const HoneypotPage = lazy(() => import("@/pages/honeypot-page"))
-const SearchPage = lazy(() => import("@/pages/search-page"))
-const SettingsPage = lazy(() => import("@/pages/settings-page"))
+const DashboardPage = lazy(() => import("@/pages/dashboard-page").then(m => ({ default: m.DashboardPage || (m as any).default })))
+const RankingsPage = lazy(() => import("@/pages/rankings-page").then(m => ({ default: m.RankingsPage || (m as any).default })))
+const CandidateDetailPage = lazy(() => import("@/pages/candidate-detail-page").then(m => ({ default: m.CandidateDetailPage || (m as any).default })))
+const ComparisonPage = lazy(() => import("@/pages/comparison-page").then(m => ({ default: m.ComparisonPage || (m as any).default })))
+const AnalyticsPage = lazy(() => import("@/pages/analytics-page").then(m => ({ default: m.AnalyticsPage || (m as any).default })))
+const ExplainabilityPage = lazy(() => import("@/pages/explainability/explainability-page").then(m => ({ default: m.ExplainabilityPage || (m as any).default })))
+const HoneypotPage = lazy(() => import("@/pages/honeypot-page").then(m => ({ default: m.HoneypotPage || (m as any).default })))
+const SearchPage = lazy(() => import("@/pages/search-page").then(m => ({ default: m.SearchPage || (m as any).default })))
+const SettingsPage = lazy(() => import("@/pages/settings-page").then(m => ({ default: m.SettingsPage || (m as any).default })))
 
 const pageConfig: Record<string, { title: string; subtitle: string }> = {
   dashboard: { title: "Executive Overview", subtitle: "Real-time candidate intelligence dashboard" },
@@ -117,20 +117,20 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-surface">
+    <div className="flex h-[100dvh] overflow-hidden bg-surface">
       <div className="hidden md:flex">
         <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
 
-      <div className="flex-1 flex flex-col min-w-0 mobile-nav-spacer">
+      <div className="flex-1 flex flex-col min-w-0 mobile-nav-spacer layout-performance relative">
         <TopBar title={config.title} subtitle={config.subtitle} />
-        <main className="flex-1 overflow-y-auto" role="main" aria-label="Main content">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden" role="main" aria-label="Main content">
           {renderPage()}
         </main>
       </div>
 
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-lg border-t border-border/50 pb-[env(safe-area-inset-bottom)]"
+        className="md:hidden fixed bottom-[env(safe-area-inset-bottom,1.5rem)] left-1/2 -translate-x-1/2 z-50 bg-surface-secondary/80 backdrop-blur-xl border border-border-light rounded-2xl shadow-premium p-1.5"
         aria-label="Mobile navigation"
         role="navigation"
       >
@@ -144,14 +144,16 @@ export default function App() {
                 onClick={() => setActiveTab(item.id)}
                 aria-label={item.label}
                 aria-current={isActive ? "page" : undefined}
-                className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 min-w-[56px] min-h-[44px] rounded-[8px] transition-all duration-200 shrink-0 ${
+                className={`flex flex-col items-center justify-center gap-1 w-12 h-12 rounded-xl transition-all duration-300 shrink-0 relative ${
                   isActive
-                    ? "text-brand-600 bg-brand-50"
-                    : "text-text-dim hover:text-text-muted hover:bg-surface-secondary"
+                    ? "text-brand-400 bg-white/5"
+                    : "text-text-muted hover:text-text-primary hover:bg-white/5"
                 }`}
               >
-                <Icon className="w-4 h-4" aria-hidden="true" />
-                <span className="text-[9px] font-medium uppercase tracking-wider whitespace-nowrap">{item.label}</span>
+                {isActive && (
+                  <div className="absolute inset-0 bg-brand-500/10 rounded-xl blur-md -z-10" />
+                )}
+                <Icon className="w-5 h-5" aria-hidden="true" />
               </button>
             )
           })}

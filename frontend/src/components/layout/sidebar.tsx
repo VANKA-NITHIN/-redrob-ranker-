@@ -49,22 +49,22 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
     <aside
       aria-label="Main navigation"
       className={cn(
-        "h-screen sticky top-0 flex flex-col border-r border-border/50 bg-surface transition-all duration-300 ease-out",
-        collapsed ? "w-[64px]" : "w-[220px]"
+        "h-screen sticky top-0 flex flex-col bg-surface-secondary border-r border-border-light transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        collapsed ? "w-[64px]" : "w-[240px] xl:w-[280px]"
       )}
     >
-      {/* Brand */}
+      {/* Brand Workspace Switcher */}
       <div className={cn(
-        "flex items-center h-14 border-b border-border/50 shrink-0",
-        collapsed ? "justify-center px-2" : "gap-3 px-4"
+        "flex items-center h-14 border-b border-border-light shrink-0 px-3",
+        collapsed && "justify-center"
       )}>
-        <div className="w-8 h-8 rounded-[10px] bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-sm font-bold shrink-0" aria-hidden="true">
+        <div className="w-7 h-7 rounded-[6px] bg-white text-black flex items-center justify-center text-xs font-bold shrink-0 shadow-sm" aria-hidden="true">
           R
         </div>
         {!collapsed && (
-          <div className="overflow-hidden min-w-0">
-            <div className="text-sm font-semibold text-text-primary truncate">Redrob AI</div>
-            <div className="text-[10px] text-text-muted font-medium uppercase tracking-wider truncate">Talent Intelligence</div>
+          <div className="ml-3 overflow-hidden min-w-0 flex-1">
+            <div className="text-[13px] font-semibold text-text-primary truncate">Redrob AI</div>
+            <div className="text-[11px] text-text-muted font-medium truncate">Enterprise</div>
           </div>
         )}
       </div>
@@ -81,21 +81,21 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
               aria-label={item.label}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-sm font-medium transition-all duration-200 min-h-[44px]",
+                "w-full flex items-center gap-3 px-3 py-2 rounded-[6px] text-[13px] font-medium transition-all duration-200 min-h-[36px] relative group",
                 isActive
-                  ? "bg-brand-50 text-brand-700"
-                  : "text-text-muted hover:text-text-primary hover:bg-surface-secondary",
+                  ? "bg-white/5 text-text-primary"
+                  : "text-text-secondary hover:text-text-primary hover:bg-white/[0.02]",
                 collapsed && "justify-center px-2"
               )}
               title={collapsed ? item.label : undefined}
             >
-              <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
+              <Icon className={cn("w-4 h-4 shrink-0 transition-colors", isActive ? "text-brand-400" : "text-text-muted group-hover:text-text-secondary")} aria-hidden="true" />
               {!collapsed && <span className="truncate">{item.label}</span>}
               {isActive && !collapsed && (
-                <div className="ml-auto w-1 h-4 rounded-full bg-brand-500" aria-hidden="true" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-brand-500" aria-hidden="true" />
               )}
               {isActive && collapsed && (
-                <div className="absolute right-0 w-0.5 h-5 rounded-full bg-brand-500" aria-hidden="true" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-brand-500" aria-hidden="true" />
               )}
             </button>
           )

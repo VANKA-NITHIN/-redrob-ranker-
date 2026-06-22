@@ -5,6 +5,19 @@ export interface RankingEntry {
   reasoning: string
   penalty: number
   issues: string[]
+  badge: 'verified' | 'suspicious' | 'honeypot'
+  // Enriched fields from API
+  name?: string
+  title?: string
+  company?: string
+  location?: string
+  country?: string
+  experience?: number
+  headline?: string
+  skills?: string[]
+  education?: string
+  openToWork?: boolean
+  noticePeriod?: number
 }
 
 export interface CandidateProfile {

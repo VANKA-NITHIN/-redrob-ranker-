@@ -1,9 +1,11 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { PageHeader } from "@/components/layout/page-header"
 import { motion } from "framer-motion"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { getHealth, runRanking } from "@/lib/api"
 import {
   Settings,
   Moon,
@@ -15,6 +17,9 @@ import {
   Check,
   Info,
   Save,
+  Loader2,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react"
 
 export function SettingsPage() {
@@ -23,6 +28,22 @@ export function SettingsPage() {
   const [dataSource, setDataSource] = useState("sample")
   const [topK, setTopK] = useState(100)
   const [saved, setSaved] = useState(false)
+  const [apiStatus, setApiStatus] = useState<"checking" | "connected" | "disconnected">("checking")
+  const [apiVersion, setApiVersion] = useState("")
+  const [rerunning, setRerunning] = useState(false)
+  const [rerunResult, setRerunResult] = useState<string | null>(null)
+
+  // Check API health on mount
+  useEffect(() => {
+    getHealth()
+      .then((data) => {
+        setApiStatus("connected")
+        setApiVersion(data.version || "unknown")
+      })
+      .catch(() => {
+        setApiStatus("disconnected")
+      })
+  }, [])
 
   const toggleDark = () => {
     setDarkMode(!darkMode)
@@ -30,8 +51,28 @@ export function SettingsPage() {
   }
 
   const handleSave = () => {
+    // Persist to localStorage
+    localStorage.setItem("redrob_settings", JSON.stringify({
+      darkMode: !darkMode ? false : true,
+      apiEndpoint,
+      dataSource,
+      topK,
+    }))
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  const handleRerun = async () => {
+    setRerunning(true)
+    setRerunResult(null)
+    try {
+      const result = await runRanking(dataSource)
+      setRerunResult(`Pipeline completed: ${result.rankings.length} candidates ranked in ${result.metrics.processingTime.toFixed(1)}s`)
+    } catch (err) {
+      setRerunResult("Pipeline failed. Check the backend logs.")
+    } finally {
+      setRerunning(false)
+    }
   }
 
   const settingsSections = [
@@ -81,14 +122,32 @@ export function SettingsPage() {
               type="text"
               value={apiEndpoint}
               onChange={(e) => setApiEndpoint(e.target.value)}
-              className="w-full h-9 px-3 rounded-[8px] border border-border/50 bg-surface-secondary text-xs text-text-primary focus:outline-none focus:border-brand-300 font-mono"
+              className="w-full h-10 px-3 rounded-lg border border-border-light bg-surface-secondary/80 text-[13px] text-text-primary focus:outline-none focus:border-brand-500/50 shadow-sm font-mono transition-all"
             />
           </div>
           <div className="flex items-center gap-2 text-xs text-text-muted">
-            <div className="w-2 h-2 rounded-full bg-success" />
-            <span>Connected</span>
-            <span className="text-text-dim">·</span>
-            <span>v4.0.0</span>
+            {apiStatus === "checking" && (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>Checking connection...</span>
+              </>
+            )}
+            {apiStatus === "connected" && (
+              <>
+                <CheckCircle2 className="w-3 h-3 text-success" />
+                <span className="text-success">Connected</span>
+                <span className="text-text-dim">·</span>
+                <span>v{apiVersion}</span>
+              </>
+            )}
+            {apiStatus === "disconnected" && (
+              <>
+                <XCircle className="w-3 h-3 text-danger" />
+                <span className="text-danger">Disconnected</span>
+                <span className="text-text-dim">·</span>
+                <span>Start server: python -m uvicorn api.main:app --reload</span>
+              </>
+            )}
           </div>
         </div>
       ),
@@ -105,10 +164,10 @@ export function SettingsPage() {
                 key={source}
                 onClick={() => setDataSource(source)}
                 className={cn(
-                  "px-3 py-1.5 rounded-[8px] text-xs font-medium border transition-all",
+                  "px-4 py-2 rounded-lg text-xs font-medium border transition-all duration-200",
                   dataSource === source
-                    ? "bg-brand-100 text-brand-700 border-brand-200"
-                    : "bg-surface-secondary text-text-muted border-border/30 hover:bg-surface-tertiary"
+                    ? "bg-brand-500/20 text-brand-300 border-brand-500/30 shadow-inner-button"
+                    : "bg-surface-secondary/50 text-text-muted border-transparent hover:bg-white/5 hover:text-text-primary"
                 )}
               >
                 {source === "sample" ? "Sample (50)" : source === "full" ? "Full (100K)" : "Custom"}
@@ -141,7 +200,7 @@ export function SettingsPage() {
               step={10}
               value={topK}
               onChange={(e) => setTopK(Number(e.target.value))}
-              className="w-full h-1.5 rounded-full bg-surface-tertiary appearance-none cursor-pointer accent-brand-600"
+              className="w-full h-1.5 rounded-full bg-surface-secondary appearance-none cursor-pointer accent-brand-500"
               aria-label="Top K candidates"
             />
             <div className="flex justify-between text-[10px] text-text-dim mt-0.5">
@@ -157,10 +216,10 @@ export function SettingsPage() {
               { label: "S-Curve", value: "Staged", desc: "NDCG@10" },
               { label: "Behavioral", value: "Enabled", desc: "Multiplier" },
             ].map((item) => (
-              <div key={item.label} className="rounded-[8px] border border-border/30 bg-surface-secondary p-2.5">
+              <div key={item.label} className="rounded-xl border border-border-light bg-surface-secondary/50 p-3 shadow-sm">
                 <p className="text-[10px] text-text-dim uppercase tracking-wider">{item.label}</p>
-                <p className="text-xs font-semibold text-text-primary mt-0.5">{item.value}</p>
-                <p className="text-[10px] text-text-muted">{item.desc}</p>
+                <p className="text-[13px] font-semibold text-text-primary mt-1">{item.value}</p>
+                <p className="text-[10px] text-text-muted mt-0.5">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -170,15 +229,17 @@ export function SettingsPage() {
   ]
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-4xl mx-auto">
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center gap-2 mb-1">
-          <h2 className="text-fluid-section font-semibold text-text-primary">Settings</h2>
-          <Badge variant="brand">v4.0</Badge>
-        </div>
-        <p className="text-fluid-small text-text-muted">Configure ranking parameters, preferences, and platform behavior.</p>
-      </motion.div>
+    <div className="relative space-y-6 max-w-[1200px] mx-auto min-h-[calc(100vh-3.5rem)] px-[clamp(1rem,3vw,3rem)] py-[clamp(1rem,3vw,2rem)]">
+      {/* Background glow */}
+      <div className="absolute top-0 left-1/3 w-1/3 h-64 bg-brand-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+      <PageHeader 
+        title="Settings"
+        description="Configure ranking parameters, preferences, and platform behavior."
+        badge={<Badge variant="brand">v4.0</Badge>}
+        actions={
+          <Button variant="outline" className="h-8 text-xs bg-surface-secondary" onClick={() => window.location.reload()}>Reset Defaults</Button>
+        }
+      />
 
       {/* Settings sections */}
       <div className="space-y-4">
@@ -246,9 +307,23 @@ export function SettingsPage() {
             <p className="text-xs text-text-muted mb-3">
               Invalidate the cache and re-process all candidates from scratch. This may take up to 5 minutes for 100K candidates.
             </p>
-            <Button variant="destructive" size="sm">
-              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-              Re-run Pipeline
+            {rerunResult && (
+              <p className={cn("text-xs mb-3 font-medium", rerunResult.includes("failed") ? "text-danger" : "text-success")}>
+                {rerunResult}
+              </p>
+            )}
+            <Button variant="destructive" size="sm" onClick={handleRerun} disabled={rerunning}>
+              {rerunning ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  Running...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                  Re-run Pipeline
+                </>
+              )}
             </Button>
           </CardContent>
         </Card>

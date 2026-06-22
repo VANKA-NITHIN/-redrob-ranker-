@@ -95,7 +95,7 @@ export function ScoreBreakdownCard(props: ScoreBreakdownProps) {
       </div>
 
       <div className="flex justify-center relative">
-        <AnimatedGauge value={props.overallMatch} label="Overall Match" size={150} />
+        <AnimatedGauge value={props.overallMatch} label="Overall Match" />
       </div>
 
       <div className="space-y-2.5">

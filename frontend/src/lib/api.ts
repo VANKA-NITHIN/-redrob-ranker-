@@ -50,3 +50,55 @@ export async function runRanking(source?: string): Promise<RankingResponse> {
 export async function getHoneypotData(): Promise<HoneypotData> {
   return fetchJSON<HoneypotData>("/honeypot")
 }
+
+export interface SearchParams {
+  q?: string
+  skills?: string
+  location?: string
+  title?: string
+  min_score?: number
+  min_experience?: number
+  sort?: "score" | "experience" | "name"
+}
+
+export interface SearchResponse {
+  results: RankingEntry[]
+  totalResults: number
+}
+
+export async function searchCandidates(params: SearchParams): Promise<SearchResponse> {
+  const searchParams = new URLSearchParams()
+  if (params.q) searchParams.set("q", params.q)
+  if (params.skills) searchParams.set("skills", params.skills)
+  if (params.location) searchParams.set("location", params.location)
+  if (params.title) searchParams.set("title", params.title)
+  if (params.min_score) searchParams.set("min_score", String(params.min_score))
+  if (params.min_experience) searchParams.set("min_experience", String(params.min_experience))
+  if (params.sort) searchParams.set("sort", params.sort)
+  const qs = searchParams.toString()
+  return fetchJSON<SearchResponse>(`/search${qs ? `?${qs}` : ""}`)
+}
+
+export interface CompareResponse {
+  candidates: Array<{
+    candidateId: string
+    rank: number
+    score: number
+    badge: string
+    title: string
+    company: string
+    location: string
+    experience: number
+    skills: string[]
+    breakdown: ScoreBreakdown
+    profile: CandidateDetails["profile"]
+  }>
+}
+
+export async function compareCandidates(ids: string[]): Promise<CompareResponse> {
+  return fetchJSON<CompareResponse>(`/compare?ids=${ids.join(",")}`)
+}
+
+export async function getHealth(): Promise<{ status: string; version: string }> {
+  return fetchJSON<{ status: string; version: string }>("/health")
+}

@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react"
+import { PageHeader } from "@/components/layout/page-header"
+import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -146,19 +148,21 @@ export function ExplainabilityPage() {
   }
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <div className="flex items-center gap-2 mb-1">
-          <h2 className="text-fluid-section font-semibold text-text-primary">AI Explainability Dashboard</h2>
-          <Badge variant="brand">Live</Badge>
-        </div>
-        <p className="text-fluid-small text-text-muted">Understanding every ranking decision with transparency and recruiter-friendly explanations.</p>
-      </motion.div>
+    <motion.div variants={container} initial="hidden" animate="show" className="relative space-y-6 max-w-[2200px] mx-auto min-h-[calc(100vh-3.5rem)] px-[clamp(1rem,3vw,3rem)] py-[clamp(1rem,3vw,2rem)]">
+      {/* Background glow */}
+      <div className="absolute top-10 right-1/3 w-1/3 h-64 bg-brand-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+      <PageHeader 
+        title="AI Explainability Dashboard"
+        description="Understanding every ranking decision with transparency and recruiter-friendly explanations."
+        badge={<Badge variant="brand">Live</Badge>}
+        actions={
+          <Button variant="outline" className="h-8 text-xs bg-surface-secondary">Download Audit Log</Button>
+        }
+      />
 
       {/* Candidate Selector */}
       <motion.div
-        className="rounded-[14px] border border-border/50 bg-surface p-3"
+        className="flex flex-wrap items-center gap-3 rounded-xl border border-border-light bg-surface/50 backdrop-blur-xl shadow-sm p-2"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.05 }}
@@ -170,13 +174,13 @@ export function ExplainabilityPage() {
               <button
                 key={c.candidateId}
                 onClick={() => setSelectedId(c.candidateId)}
-                className={`px-2.5 py-1 rounded-[6px] text-xs font-medium transition-all duration-200 ${
+                className={`px-3 py-1.5 rounded-[8px] text-[12px] font-medium transition-all duration-300 whitespace-nowrap border ${
                   selectedId === c.candidateId
-                    ? "bg-brand-100 text-brand-700 border border-brand-200"
-                    : "bg-surface-secondary text-text-muted border border-border/30 hover:bg-surface-tertiary"
+                    ? "bg-white/10 text-text-primary border-border-light shadow-inner-button"
+                    : "bg-transparent text-text-muted border-transparent hover:text-text-primary hover:bg-white/5"
                 }`}
               >
-                #{c.rank} {c.candidateId.slice(-6)}
+                <span className="opacity-50 font-normal">#</span>{c.rank} <span className="ml-1 tracking-wider">{c.candidateId.slice(-6)}</span>
               </button>
             ))}
           </div>
@@ -189,20 +193,20 @@ export function ExplainabilityPage() {
       {/* Candidate Info Bar */}
       {details && !loading && (
         <motion.div
-          className="rounded-[14px] border border-border/50 bg-surface p-3 sm:p-4 flex flex-wrap items-center gap-3 sm:gap-4"
+          className="rounded-xl border border-border-light bg-surface/40 backdrop-blur-xl shadow-premium p-4 sm:p-5 flex flex-wrap items-center gap-4 sm:gap-6"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.08 }}
         >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-[10px] bg-brand-100 flex items-center justify-center">
-              <span className="text-sm font-bold text-brand-700">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-surface-secondary flex items-center justify-center border border-border-light shadow-inner">
+              <span className="text-lg font-bold text-brand-400">
                 #{candidates.find((c) => c.candidateId === selectedId)?.rank ?? "?"}
               </span>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-text-primary">{selectedId}</h3>
-              <p className="text-xs text-text-muted">
+              <h3 className="text-[15px] font-semibold text-text-primary mb-0.5">{selectedId}</h3>
+              <p className="text-xs text-text-secondary">
                 {details.profile.currentTitle} at {details.profile.currentCompany || "—"}
               </p>
             </div>

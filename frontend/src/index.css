@@ -1,135 +1,198 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
-  --color-brand-200: #c7d2fe;
-  --color-brand-300: #a5b4fc;
-  --color-brand-400: #818cf8;
-  --color-brand-500: #6366f1;
-  --color-brand-600: #4f46e5;
-  --color-brand-700: #4338ca;
-  --color-brand-800: #3730a3;
-  --color-brand-900: #312e81;
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-200: #ddd6fe;
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #7c3aed;
+  --color-brand-700: #6d28d9;
+  --color-brand-800: #5b21b6;
+  --color-brand-900: #4c1d95;
 
-  --color-surface: #ffffff;
-  --color-surface-secondary: #f8fafc;
-  --color-surface-tertiary: #f1f5f9;
-  --color-surface-hover: #e2e8f0;
-  --color-border: #e2e8f0;
-  --color-border-light: #f1f5f9;
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #334155;
-  --color-text-muted: #64748b;
-  --color-text-dim: #94a3b8;
+  /* Refined, modern dark palette as default */
+  --color-surface: #0a0a0b;
+  --color-surface-secondary: #141416;
+  --color-surface-tertiary: #1c1c1f;
+  --color-surface-hover: #232326;
+  
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-light: rgba(255, 255, 255, 0.04);
+  --color-border-hover: rgba(255, 255, 255, 0.16);
+  
+  --color-text-primary: #fcfcfc;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #71717a;
+  --color-text-dim: #52525b;
 
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
   --color-info: #3b82f6;
 
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
 
-  --radius-sm: 6px;
+  --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
+  --radius-2xl: 24px;
 
-  --animate-fade-in: fade-in 0.5s ease-out;
-  --animate-slide-up: slide-up 0.4s ease-out;
-  --animate-slide-left: slide-left 0.3s ease-out;
-  --animate-scale-in: scale-in 0.2s ease-out;
+  /* Fluid Typography System */
+  --text-xs: clamp(0.75rem, 0.7rem + 0.2vw, 0.875rem);
+  --text-sm: clamp(0.875rem, 0.8rem + 0.3vw, 1rem);
+  --text-base: clamp(1rem, 0.9rem + 0.4vw, 1.125rem);
+  --text-lg: clamp(1.125rem, 1rem + 0.5vw, 1.5rem);
+  --text-xl: clamp(1.25rem, 1.1rem + 0.7vw, 2rem);
+  --text-2xl: clamp(1.5rem, 1.3rem + 1vw, 2.5rem);
+  --text-3xl: clamp(1.875rem, 1.6rem + 1.4vw, 3rem);
+  --text-4xl: clamp(2.25rem, 1.9rem + 1.8vw, 4rem);
+  --text-5xl: clamp(3rem, 2.5rem + 2.5vw, 5rem);
+
+  --animate-fade-in: fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-up: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-down: slide-down 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-left: slide-left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-scale-in: scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   --animate-spin-slow: spin 3s linear infinite;
-  --animate-accordion-down: accordion-down 0.2s ease-out;
-  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Fluid typography — user-specified clamp values */
+/* Base styles for Safe Areas and performance */
+html, body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Foldable support */
+@media (horizontal-viewport-segments: 2) {
+  .app-layout {
+    padding-inline: env(fold-left);
+  }
+}
+
+/* Fluid typography legacy utilities with tighter tracking for premium feel */
 @utility text-fluid-hero {
-  font-size: clamp(2rem, 5vw, 4rem);
-  line-height: 1.1;
+  font-size: var(--text-5xl);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
 }
 @utility text-fluid-section {
-  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  font-size: var(--text-2xl);
   line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 @utility text-fluid-body {
-  font-size: clamp(0.9rem, 1vw, 1rem);
-  line-height: 1.5;
+  font-size: var(--text-base);
+  line-height: 1.6;
 }
 @utility text-fluid-small {
-  font-size: clamp(0.75rem, 0.8vw, 0.875rem);
+  font-size: var(--text-sm);
+  letter-spacing: 0.01em;
 }
 
-/* Responsive grid helpers */
+/* Gradients and Shadows - Premium SaaS specific */
+@utility bg-gradient-glow {
+  background: radial-gradient(circle at center, rgba(139, 92, 246, 0.15), transparent 70%);
+}
+@utility glass-panel {
+  background: rgba(20, 20, 22, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+@utility shadow-premium {
+  box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.5), 0 0 1px 0 rgba(255,255,255,0.1) inset;
+}
+@utility shadow-premium-hover {
+  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.6), 0 0 1px 0 rgba(255,255,255,0.15) inset;
+}
+@utility shadow-inner-button {
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive grid helpers & Performance */
+@utility layout-performance {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1000px;
+}
 @utility grid-auto-responsive {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
 }
 @utility grid-metrics {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 @utility grid-charts {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 450px), 1fr));
 }
 
-/* Animations */
+/* Refined Animations */
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 @keyframes slide-left {
-  from { opacity: 0; transform: translateX(10px); }
+  from { opacity: 0; transform: translateX(16px); }
   to { opacity: 1; transform: translateX(0); }
 }
 @keyframes scale-in {
-  from { opacity: 0; transform: scale(0.95); }
+  from { opacity: 0; transform: scale(0.97); }
   to { opacity: 1; transform: scale(1); }
 }
-@keyframes accordion-down {
-  from { height: 0; }
-  to { height: var(--radix-accordion-content-height); }
-}
-@keyframes accordion-up {
-  from { height: var(--radix-accordion-content-height); }
-  to { height: 0; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
-/* Dark mode — class-based (enabled by toggle button) */
-:root.dark {
-  --color-surface: #0f172a;
-  --color-surface-secondary: #1e293b;
-  --color-surface-tertiary: #334155;
-  --color-surface-hover: #475569;
-  --color-border: #1e293b;
-  --color-border-light: #1e293b;
-  --color-text-primary: #f1f5f9;
-  --color-text-secondary: #cbd5e1;
-  --color-text-muted: #94a3b8;
-  --color-text-dim: #64748b;
+/* Force dark mode for premium feel */
+:root {
+  color-scheme: dark;
+  --color-surface: #0a0a0b;
+  --color-surface-secondary: #141416;
+  --color-surface-tertiary: #1c1c1f;
+  --color-surface-hover: #232326;
+  
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-light: rgba(255, 255, 255, 0.04);
+  --color-border-hover: rgba(255, 255, 255, 0.16);
+  
+  --color-text-primary: #fcfcfc;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #71717a;
+  --color-text-dim: #52525b;
 }
 
-/* Respect OS-level preference as default */
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    --color-surface: #0f172a;
-    --color-surface-secondary: #1e293b;
-    --color-surface-tertiary: #334155;
-    --color-surface-hover: #475569;
-    --color-border: #1e293b;
-    --color-border-light: #1e293b;
-    --color-text-primary: #f1f5f9;
-    --color-text-secondary: #cbd5e1;
-    --color-text-muted: #94a3b8;
-    --color-text-dim: #64748b;
-  }
+/* Light mode overrides - keeping it very clean (Vercel style) */
+:root.light {
+  color-scheme: light;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f9fafb;
+  --color-surface-tertiary: #f3f4f6;
+  --color-surface-hover: #e5e7eb;
+  
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-light: rgba(0, 0, 0, 0.04);
+  --color-border-hover: rgba(0, 0, 0, 0.16);
+  
+  --color-text-primary: #09090b;
+  --color-text-secondary: #52525b;
+  --color-text-muted: #71717a;
+  --color-text-dim: #a1a1aa;
 }
 
-/* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -149,6 +212,7 @@ html {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   font-size: 16px;
 }
 
@@ -156,33 +220,31 @@ body {
   background: var(--color-surface);
   color: var(--color-text-primary);
   line-height: 1.5;
+  overflow-x: hidden;
 }
 
-/* Fluid scrollbar */
+/* Fluid scrollbar - Minimalist */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
 }
-@media (min-width: 768px) {
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { 
+  background: transparent; 
 }
-::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 3px;
+  background: var(--color-surface-tertiary);
+  border-radius: 4px;
 }
-::-webkit-scrollbar-thumb:hover { background: var(--color-text-dim); }
+::-webkit-scrollbar-thumb:hover { 
+  background: var(--color-text-dim); 
+}
 ::selection {
-  background: rgba(99, 102, 241, 0.2);
+  background: rgba(139, 92, 246, 0.3);
   color: var(--color-text-primary);
 }
 
-/* Container queries support */
-
-
-/* Mobile bottom nav spacer */
 .mobile-nav-spacer {
-  padding-bottom: 4rem;
+  padding-bottom: 5rem;
 }
 @media (min-width: 768px) {
   .mobile-nav-spacer { padding-bottom: 0; }
@@ -191,7 +253,7 @@ body {
 @layer base {
   * {
     border-color: var(--color-border);
-    outline-color: var(--color-brand-400);
+    outline-color: var(--color-brand-500);
   }
   body {
     background: var(--color-surface);

@@ -21,55 +21,44 @@ export function MetricCard({
 }: MetricCardProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay, ease: "easeOut" }}
-      className="rounded-[14px] border border-border/50 bg-surface p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden group"
+      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
+      className="rounded-xl border border-border-light bg-surface/40 p-5 shadow-sm hover:shadow-premium transition-all duration-300 relative overflow-hidden group backdrop-blur-sm flex flex-col"
     >
-      {/* Top accent bar */}
-      <div
-        className="absolute top-0 left-0 right-0 h-[3px] opacity-80"
-        style={{ background: `linear-gradient(90deg, ${color}, ${color}88)` }}
-      />
-
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-muted">
-            {label}
-          </p>
-          <p
-            className="text-2xl font-bold tracking-tight"
-            style={{ color }}
-          >
-            {value}
-          </p>
-        </div>
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-[13px] font-medium text-text-muted flex items-center gap-2">
+          {label}
+        </p>
         <div
-          className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0"
-          style={{ background: `${color}15` }}
+          className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0 border border-border-light shadow-inner-button"
+          style={{ background: `linear-gradient(135deg, ${color}22, transparent)` }}
         >
-          {icon}
+          <div style={{ color }}>{icon}</div>
         </div>
       </div>
 
-      {trend !== undefined && (
-        <div className="flex items-center gap-1 mt-2">
-          {trend >= 0 ? (
-            <TrendingUp className="w-3 h-3 text-success" />
-          ) : (
-            <TrendingDown className="w-3 h-3 text-danger" />
-          )}
-          <span
-            className={cn(
-              "text-xs font-medium",
-              trend >= 0 ? "text-success" : "text-danger"
-            )}
-          >
-            {Math.abs(trend)}%
-          </span>
-          <span className="text-[10px] text-text-dim">vs last run</span>
-        </div>
-      )}
+      <div className="mt-auto">
+        <p className="text-3xl font-semibold tracking-[-0.03em] text-text-primary mb-2">
+          {value}
+        </p>
+        {trend !== undefined && (
+          <div className="flex items-center gap-1.5">
+            <span
+              className={cn(
+                "flex items-center text-[11px] font-medium px-1.5 py-0.5 rounded-[4px]",
+                trend >= 0 ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+              )}
+            >
+              {trend >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+              {Math.abs(trend)}%
+            </span>
+            <span className="text-[11px] text-text-dim">vs last month</span>
+          </div>
+        )}
+      </div>
     </motion.div>
   )
 }

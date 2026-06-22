@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { motion } from "framer-motion"
 import {
   useReactTable,
@@ -14,7 +14,11 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { MetricCardSkeleton, ChartSkeleton } from "@/components/ui/skeleton"
 import { cn, formatScore } from "@/lib/utils"
+import { getRankings } from "@/lib/api"
+import { PageHeader } from "@/components/layout/page-header"
+import type { RankingEntry } from "@/types"
 import {
   Search,
   ArrowUpDown,
@@ -24,17 +28,11 @@ import {
   Star,
   Filter,
   Download,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react"
 
-interface RankingRow {
-  rank: number
-  score: number
-  candidateId: string
-  reasoning: string
-  badge: "verified" | "suspicious" | "honeypot"
-}
-
-const columnHelper = createColumnHelper<RankingRow>()
+const columnHelper = createColumnHelper<RankingEntry>()
 
 const columns = [
   columnHelper.accessor("rank", {
@@ -58,11 +56,21 @@ const columns = [
   }),
   columnHelper.accessor("candidateId", {
     header: "Candidate",
-    cell: (info) => (
-      <span className="font-mono text-sm text-text-primary">
-        {info.getValue()}
-      </span>
-    ),
+    cell: (info) => {
+      const row = info.row.original
+      return (
+        <div className="min-w-0">
+          <span className="font-mono text-sm text-text-primary block">
+            {info.getValue()}
+          </span>
+          {row.title && (
+            <span className="text-[11px] text-text-muted block truncate">
+              {row.title}{row.company ? ` at ${row.company}` : ""}
+            </span>
+          )}
+        </div>
+      )
+    },
     enableSorting: true,
   }),
   columnHelper.accessor("score", {
@@ -102,41 +110,33 @@ const columns = [
   }),
 ]
 
-// Generate mock data matching our sample output
-function generateMockData(): RankingRow[] {
-  const data: RankingRow[] = []
-  const candidates = [
-    { id: "CAND_0000031", score: 0.7621, badge: "suspicious" as const, reasoning: "SUSPICIOUS PROFILE (7 AI skills not evidenced; statistical anomaly in description length); Data Scientist; 11yrs ..." },
-    { id: "CAND_0000001", score: 0.1818, badge: "suspicious" as const, reasoning: "SUSPICIOUS PROFILE (7 AI skills not evidenced); Backend Engineer; 7yrs at Mindtree; product co; responsive; actively looking; short notice ..." },
-    { id: "CAND_0000010", score: 0.1496, badge: "verified" as const, reasoning: "ML Engineer; 7yrs at Zomato; built ranking, recommendation, retrieval systems; product co; responsive; actively looking; short notice; based Bengaluru ..." },
-    { id: "CAND_0000023", score: 0.1302, badge: "verified" as const, reasoning: "Software Engineer; 8yrs at Google; built search infrastructure components ..." },
-    { id: "CAND_0000044", score: 0.1197, badge: "verified" as const, reasoning: "Data Scientist; 6yrs at Amazon; worked on recommendation systems ..." },
-    { id: "CAND_0000048", score: 0.1151, badge: "verified" as const, reasoning: "ML Engineer; 5yrs at Microsoft; built production ML pipelines ..." },
-    { id: "CAND_0000027", score: 0.1113, badge: "verified" as const, reasoning: "AI Engineer; 9yrs at LinkedIn; worked on search relevance ..." },
-    { id: "CAND_0000024", score: 0.0844, badge: "verified" as const, reasoning: "Software Engineer; 7yrs; product co experience ..." },
-    { id: "CAND_0000016", score: 0.0684, badge: "verified" as const, reasoning: "Full Stack Engineer; 6yrs; building data pipelines ..." },
-    { id: "CAND_0000032", score: 0.0664, badge: "suspicious" as const, reasoning: "SUSPICIOUS PROFILE (salary range inverted; statistical anomaly); ..." },
-  ]
-
-  // Extend to 50 entries
-  for (let i = 0; i < 50; i++) {
-    const base = candidates[i % candidates.length]
-    data.push({
-      rank: i + 1,
-      score: base.score * (1 - i * 0.002),
-      candidateId: i < candidates.length ? candidates[i].id : `CAND_${String(i + 1).padStart(7, "0")}`,
-      reasoning: base.reasoning,
-      badge: i < 3 ? base.badge : (i < 45 ? "verified" : "suspicious"),
-    })
-  }
-  return data
-}
-
 export function RankingsPage() {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [globalFilter, setGlobalFilter] = useState("")
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
+  const [data, setData] = useState<RankingEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let ignore = false
+    getRankings()
+      .then((result) => {
+        if (!ignore) {
+          setData(result.rankings)
+          setLoading(false)
+        }
+      })
+      .catch((err) => {
+        if (!ignore) {
+          console.error("Failed to load rankings:", err)
+          setError("Could not connect to the ranking backend. Make sure the API server is running on port 8000.")
+          setLoading(false)
+        }
+      })
+    return () => { ignore = true }
+  }, [])
 
   const toggleCard = useCallback((idx: number) => {
     setExpandedCards((prev) => {
@@ -147,7 +147,22 @@ export function RankingsPage() {
     })
   }, [])
 
-  const data = useMemo(() => generateMockData(), [])
+  const handleExport = useCallback(() => {
+    if (data.length === 0) return
+    const csv = [
+      "rank,candidate_id,score,badge,reasoning",
+      ...data.map(r =>
+        `${r.rank},"${r.candidateId}",${r.score},"${r.badge}","${(r.reasoning || "").replace(/"/g, '""')}"`
+      )
+    ].join("\n")
+    const blob = new Blob([csv], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "rankings_export.csv"
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [data])
 
   const table = useReactTable({
     data,
@@ -169,35 +184,56 @@ export function RankingsPage() {
     },
   })
 
-  return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="rounded-[12px] border border-danger/20 bg-danger/5 p-4 flex items-center gap-3">
+          <AlertTriangle className="w-4 h-4 text-danger shrink-0" />
           <div>
-            <h2 className="text-fluid-section font-semibold text-text-primary">
-              Candidate Rankings
-            </h2>
-            <p className="text-fluid-small text-text-muted mt-0.5">
-              AI-powered ranking of {data.length} candidates
-            </p>
+            <p className="text-sm font-medium text-danger">Connection Error</p>
+            <p className="text-xs text-text-muted mt-0.5">{error}</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+        </div>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="flex items-center gap-3">
+          <Loader2 className="w-5 h-5 animate-spin text-brand-500" />
+          <p className="text-sm text-text-muted">Running ranking pipeline on candidate data...</p>
+        </div>
+        <div className="grid-metrics gap-3">
+          {Array.from({ length: 3 }).map((_, i) => <MetricCardSkeleton key={i} />)}
+        </div>
+        <ChartSkeleton />
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative space-y-6 max-w-[2200px] mx-auto min-h-[calc(100vh-3.5rem)] px-[clamp(1rem,3vw,3rem)] py-[clamp(1rem,3vw,2rem)]">
+      {/* Background glow */}
+      <div className="absolute top-20 right-1/4 w-1/3 h-64 bg-brand-500/5 blur-[120px] rounded-full pointer-events-none -z-10" />
+      
+      <PageHeader
+        title="Candidate Rankings"
+        description={`AI-powered ranking of ${data.length} candidates`}
+        actions={
+          <>
+            <Button variant="outline" size="sm" className="h-8">
               <Filter className="w-3.5 h-3.5 mr-1.5" />
               Filters
             </Button>
-            <Button variant="gradient" size="sm">
+            <Button variant="gradient" size="sm" className="h-8" onClick={handleExport}>
               <Download className="w-3.5 h-3.5 mr-1.5" />
               Export
             </Button>
-          </div>
-        </div>
-      </motion.div>
+          </>
+        }
+      />
 
       {/* Top 3 Highlight */}
       <motion.div
@@ -207,15 +243,16 @@ export function RankingsPage() {
         className="grid-auto-responsive gap-3"
       >
         {data.slice(0, 3).map((c, i) => (
-          <Card key={c.candidateId} hover>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "w-10 h-10 rounded-[10px] flex items-center justify-center text-lg font-bold",
-                  i === 0 ? "bg-amber-50 text-amber-600" :
-                  i === 1 ? "bg-slate-50 text-slate-500" :
-                  "bg-orange-50 text-orange-600"
-                )}>
+          <div key={c.candidateId} className="group relative rounded-xl border border-border-light bg-surface/40 backdrop-blur-md p-4 shadow-sm hover:shadow-premium transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl" />
+            
+            <div className="relative flex items-center gap-4">
+              <div className={cn(
+                "w-12 h-12 rounded-[10px] flex items-center justify-center text-xl font-bold border border-border-light shadow-inner-button",
+                i === 0 ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
+                i === 1 ? "bg-slate-300/10 text-slate-300 border-slate-300/20" :
+                "bg-orange-500/10 text-orange-500 border-orange-500/20"
+              )}>
                   {["🥇", "🥈", "🥉"][i]}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -225,37 +262,37 @@ export function RankingsPage() {
                     </span>
                     <Badge variant={c.badge} />
                   </div>
-                  <p className="text-xs text-text-muted truncate mt-0.5">
-                    {c.reasoning}
+                  <p className="text-[12px] text-text-muted truncate mt-1">
+                    {c.title ? `${c.title}${c.company ? ` at ${c.company}` : ""}` : c.reasoning}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-mono text-lg font-bold text-brand-600">
+                  <p className="font-mono text-xl font-semibold text-brand-400">
                     {formatScore(c.score)}
                   </p>
-                  <p className="text-[10px] text-text-dim uppercase tracking-wider">
-                    Score
+                  <p className="text-[10px] text-text-dim uppercase tracking-[0.05em] mt-0.5">
+                    Match Score
                   </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </div>
         ))}
       </motion.div>
 
       {/* Search + Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-dim" />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-surface/50 p-2 rounded-xl border border-border-light backdrop-blur-md shadow-sm">
+        <div className="relative flex-1 w-full max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-dim" />
           <input
             type="text"
             value={globalFilter}
             onChange={(e) => setGlobalFilter(e.target.value)}
-            placeholder="Search by ID, company, or skill..."
-            className="w-full h-9 pl-9 pr-3 rounded-[8px] border border-border/50 bg-surface-secondary text-xs text-text-primary placeholder:text-text-dim focus:outline-none focus:border-brand-300 focus:ring-1 focus:ring-brand-200 transition-all"
+            placeholder="Search candidates..."
+            className="w-full h-9 pl-9 pr-3 bg-transparent text-[13px] text-text-primary placeholder:text-text-dim focus:outline-none transition-all"
           />
         </div>
-        <select className="h-9 px-3 rounded-[8px] border border-border/50 bg-surface-secondary text-xs text-text-muted focus:outline-none">
+        <div className="w-px h-5 bg-border-light hidden sm:block mx-1" />
+        <select className="h-9 px-3 bg-transparent text-[13px] text-text-secondary focus:outline-none cursor-pointer hover:text-text-primary transition-colors">
           <option>All Statuses</option>
           <option>Verified</option>
           <option>Suspicious</option>
@@ -268,15 +305,13 @@ export function RankingsPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4, delay: 0.2 }}
+        className="rounded-xl border border-border-light bg-surface/40 backdrop-blur-md overflow-hidden shadow-premium"
       >
-        <Card>
-          <CardContent className="p-0">
-            {/* Desktop: Full table */}
-            <div className="hidden sm:block overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <tr key={headerGroup.id} className="border-b border-border/50">
+        <div className="hidden sm:block overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id} className="border-b border-border-light bg-surface-secondary/50">
                       {headerGroup.headers.map((header) => (
                         <th
                           key={header.id}
@@ -327,7 +362,7 @@ export function RankingsPage() {
             </div>
 
             {/* Mobile: Card mode with expandable rows */}
-            <div className="sm:hidden divide-y divide-border/25">
+            <div className="sm:hidden divide-y divide-border-light">
               {table.getRowModel().rows.map((row, idx) => {
                 const cells = row.getVisibleCells()
                 const rankCell = cells.find(c => c.column.id === 'rank')
@@ -378,12 +413,10 @@ export function RankingsPage() {
                 )
               })}
             </div>
-          </CardContent>
-        </Card>
       </motion.div>
 
       {/* Pagination */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2">
         <p className="text-xs text-text-muted">
           Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}
           {" to "}
@@ -402,7 +435,7 @@ export function RankingsPage() {
           >
             <ChevronLeft className="w-3.5 h-3.5" />
           </Button>
-          {Array.from({ length: table.getPageCount() }, (_, i) => (
+          {Array.from({ length: Math.min(table.getPageCount(), 7) }, (_, i) => (
             <Button
               key={i}
               variant={table.getState().pagination.pageIndex === i ? "default" : "outline"}
@@ -429,3 +462,5 @@ export function RankingsPage() {
     </div>
   )
 }
+
+export default RankingsPage

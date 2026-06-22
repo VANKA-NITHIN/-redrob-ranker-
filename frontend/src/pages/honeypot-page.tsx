@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react"
+import { PageHeader } from "@/components/layout/page-header"
+import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
@@ -32,13 +34,19 @@ import {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="rounded-[8px] border border-border/50 bg-surface shadow-md p-3 text-xs">
-        <p className="font-semibold text-text-primary mb-1">{label}</p>
-        {payload.map((p: any, i: number) => (
-          <p key={i} style={{ color: p.color }}>
-            {p.name}: {typeof p.value === "number" ? p.value.toLocaleString() : p.value}
-          </p>
-        ))}
+      <div className="rounded-[8px] border border-border-light bg-surface-secondary/95 backdrop-blur-md shadow-premium p-3 text-[13px] min-w-[140px]">
+        <p className="font-semibold text-text-primary mb-2 border-b border-border-light pb-1">{label}</p>
+        <div className="space-y-1">
+          {payload.map((p: any, i: number) => (
+            <div key={i} className="flex items-center justify-between">
+              <span className="text-text-muted flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+                {p.name}
+              </span>
+              <span className="font-medium text-text-primary">{typeof p.value === "number" ? p.value.toLocaleString() : p.value}</span>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -145,17 +153,17 @@ export function HoneypotPage() {
   } = data!
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center gap-2 mb-1">
-          <h2 className="text-fluid-section font-semibold text-text-primary">Honeypot Detection</h2>
-          <Badge variant="brand">20 Checks</Badge>
-        </div>
-        <p className="text-fluid-small text-text-muted">
-          Real-time detection of adversarial profiles, fake candidates, and statistical anomalies.
-        </p>
-      </motion.div>
+    <motion.div variants={container} initial="hidden" animate="show" className="relative space-y-8 max-w-[2200px] mx-auto min-h-[calc(100vh-3.5rem)] px-[clamp(1rem,3vw,3rem)] py-[clamp(1rem,3vw,2rem)]">
+      {/* Background glow */}
+      <div className="absolute top-0 right-1/4 w-1/3 h-64 bg-danger/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+      <PageHeader 
+        title="Honeypot Detection"
+        description="Real-time detection of adversarial profiles, fake candidates, and statistical anomalies."
+        badge={<Badge variant="brand">20 Checks</Badge>}
+        actions={
+          <Button variant="outline" className="h-8 text-xs bg-surface-secondary">Export Threat Log</Button>
+        }
+      />
 
       {/* KPI Cards */}
       <motion.div variants={container} className="grid-metrics gap-3">
@@ -177,10 +185,10 @@ export function HoneypotPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-72">
+              <div className="h-[clamp(250px,40vh,600px)] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={violationBreakdown} layout="vertical" margin={{ left: 20, right: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 10, fill: "var(--color-text-muted)" }} />
                     <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: "var(--color-text-muted)" }} width={120} />
                     <ReTooltip content={<CustomTooltip />} />
@@ -206,7 +214,7 @@ export function HoneypotPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-72">
+              <div className="h-[clamp(250px,40vh,600px)] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <RePieChart>
                     <Pie
@@ -245,10 +253,10 @@ export function HoneypotPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="min-h-[180px] sm:min-h-[220px] h-auto">
+            <div className="h-[clamp(250px,40vh,600px)] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={multiHitDistribution}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" vertical={false} />
                   <XAxis dataKey="hits" tick={{ fontSize: 10, fill: "var(--color-text-muted)" }} />
                   <YAxis tick={{ fontSize: 10, fill: "var(--color-text-muted)" }} />
                   <ReTooltip content={<CustomTooltip />} />
