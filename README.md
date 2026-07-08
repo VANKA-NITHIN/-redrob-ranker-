@@ -341,7 +341,7 @@ The multiplier can only amplify or reduce the career score — it can never over
 | **Submission** | [output/submission.csv](output/submission.csv) |
 
 ---
-
+LIVE LINK: https://vankanithin-redrob-ranker.hf.space/
 ## 📝 Status
 
 - ✅ **Stage 1 (Format):** `python data/validate_submission.py` → Valid
